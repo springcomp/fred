@@ -1,0 +1,8 @@
+.github/
+.vs/
+[Bb]in/
+[Oo]bj/
+
+TestResults/
+
+c#/

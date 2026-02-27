@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema xmlns="http://example.com/flatfile"
+  xmlns:b="http://schemas.microsoft.com/BizTalk/2003"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.com/flatfile" elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo>
+      <b:schemaInfo standard="Flat File" root_reference="Invoice" default_child_delimiter="," child_delimiter_type="char" default_child_order="infix" codepage="65001" parser_optimization="speed" lookahead_depth="3" generate_empty_nodes="true" suppress_empty_nodes="false" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="Invoice">
+    <xs:annotation>
+      <xs:appinfo>
+        <b:recordInfo structure="delimited" child_delimiter="&#xD;&#xA;" child_delimiter_type="char" child_order="postfix" tag_name="INV" tag_offset="0" />
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+
+        <xs:element name="Header">
+          <xs:annotation>
+            <xs:appinfo>
+              <b:recordInfo structure="delimited" child_delimiter="," child_delimiter_type="char" child_order="infix" tag_name="HDR" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="InvoiceNumber" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <b:fieldInfo sequence_number="1" justification="left" />
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="InvoiceDate" type="xs:dateTime">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <b:fieldInfo sequence_number="2" justification="left" datetime_format="yyyy-MM-dd" />
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="CustomerName" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <b:fieldInfo sequence_number="3" justification="left" />
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="version" type="xs:string" use="optional">
+              <xs:annotation>
+                <xs:appinfo>
+                  <b:fieldInfo sequence_number="0" />
+                </xs:appinfo>
+              </xs:annotation>
+            </xs:attribute>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="LineItems">
+          <xs:annotation>
+            <xs:appinfo>
+              <b:recordInfo structure="delimited" child_delimiter="&#xD;&#xA;" child_delimiter_type="char" child_order="postfix" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Item" minOccurs="1" maxOccurs="unbounded">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <b:recordInfo structure="delimited" child_delimiter="," child_delimiter_type="char" child_order="infix" tag_name="LIN" />
+                  </xs:appinfo>
+                </xs:annotation>
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="SKU" type="xs:string">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <b:fieldInfo sequence_number="1" justification="left" />
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="Description" type="xs:string">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <b:fieldInfo sequence_number="2" justification="left" wrap_char="&quot;" wrap_char_type="char" />
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="Quantity" type="xs:int">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <b:fieldInfo sequence_number="3" justification="right" pad_char=" " pad_char_type="char" min_length_with_pad_char="5" />
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="UnitPrice" type="xs:decimal">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <b:fieldInfo sequence_number="4" justification="right" />
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="Footer">
+          <xs:annotation>
+            <xs:appinfo>
+              <b:recordInfo structure="delimited" child_delimiter="," child_delimiter_type="char" child_order="infix" tag_name="FTR" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TotalAmount" type="xs:decimal">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <b:fieldInfo sequence_number="1" justification="right" />
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="ItemCount" type="xs:int">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <b:fieldInfo sequence_number="2" justification="right" />
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

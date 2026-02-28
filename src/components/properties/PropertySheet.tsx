@@ -106,6 +106,7 @@ export function PropertySheet() {
           name={node.name}
           dataType={node.dataType}
           isAttribute
+          use={node.use}
           onChange={makeOnChange("fieldInfo")}
           onDirectChange={onDirectChange}
           isDirty={makeIsDirty("fieldInfo")}

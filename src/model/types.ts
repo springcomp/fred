@@ -382,7 +382,7 @@ export function createNewNode(kind: InsertableKind, nodeMap: Map<string, FFNode>
         name: generateNodeName('attribute', nodeMap),
         namespace: '',
         dataType: 'xs:string',
-        use: XmlSchemaUse.Optional,
+        use: XmlSchemaUse.Required,
         fieldInfo: createDefaultFieldInfo(),
         children: [],
       };

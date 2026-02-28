@@ -270,18 +270,27 @@ interface FieldInfoPanelProps {
   name: string;
   dataType: string;
   isAttribute?: boolean;
+  use?: string;
   onChange: (property: string, value: unknown) => void;
   onDirectChange: (property: string, value: unknown) => void;
   isDirty: (property: string) => boolean;
   isDirectDirty: (property: string) => boolean;
 }
 
-export function FieldInfoPanel({ info, name, dataType, isAttribute, onChange, onDirectChange, isDirty, isDirectDirty }: FieldInfoPanelProps) {
+const useOptions: Record<string, string> = {
+  Optional: "optional",
+  Required: "required",
+};
+
+export function FieldInfoPanel({ info, name, dataType, isAttribute, use, onChange, onDirectChange, isDirty, isDirectDirty }: FieldInfoPanelProps) {
   return (
     <div className="flex flex-col gap-0.5">
       <SectionHeader title={isAttribute ? "Attribute" : "Element"} />
       <TextField label="Name" value={name} readOnly onChange={() => {}} />
       <EnumField label="Data Type" value={dataType} options={xsdBuiltInTypes} onChange={(v) => onDirectChange("dataType", v)} dirty={isDirectDirty("dataType")} />
+      {isAttribute && use != null && (
+        <EnumField label="Use" value={use} options={useOptions} onChange={(v) => onDirectChange("use", v)} dirty={isDirectDirty("use")} />
+      )}
       <EnumField label="Justification" value={info.justification} options={justificationOptions} onChange={(v) => onChange("justification", v)} dirty={isDirty("justification")} />
       <TextField label="DateTime Format" value={info.dateTimeFormat} onChange={(v) => onChange("dateTimeFormat", v)} placeholder=".NET format string" dirty={isDirty("dateTimeFormat")} />
 

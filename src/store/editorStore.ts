@@ -17,7 +17,7 @@ const DIRECT_PROPS: Record<string, string[]> = {
   schema: ['targetNamespace', 'elementFormDefault'],
   record: ['name', 'minOccurs', 'maxOccurs'],
   element: ['name', 'dataType'],
-  attribute: ['name', 'dataType'],
+  attribute: ['name', 'dataType', 'use'],
   sequence: ['kind', 'minOccurs', 'maxOccurs'],
   choice: ['kind', 'minOccurs', 'maxOccurs'],
 };

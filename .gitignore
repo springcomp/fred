@@ -10,3 +10,5 @@ c#/
 node_modules/
 dist/
 coverage/
+
+bench-results.json

@@ -13,6 +13,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
+    benchmark: {
+      include: ['tests/**/*.bench.ts'],
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

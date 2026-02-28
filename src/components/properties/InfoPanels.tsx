@@ -46,6 +46,11 @@ const parserOptimizationOptions: Record<string, ParserOptimization> = {
   Complexity: ParserOptimization.Complexity,
 };
 
+const elementFormDefaultOptions: Record<string, string> = {
+  Qualified: "qualified",
+  Unqualified: "unqualified",
+};
+
 /** XSD built-in simple types (xs: prefix is added during serialization). */
 const xsdBuiltInTypes: Record<string, string> = {
   "xs:string": "xs:string",
@@ -98,16 +103,20 @@ const xsdBuiltInTypes: Record<string, string> = {
 
 interface SchemaInfoPanelProps {
   info: SchemaInfo;
+  elementFormDefault: string;
   onChange: (property: string, value: unknown) => void;
+  onDirectChange: (property: string, value: unknown) => void;
   isDirty: (property: string) => boolean;
+  isDirectDirty: (property: string) => boolean;
 }
 
-export function SchemaInfoPanel({ info, onChange, isDirty }: SchemaInfoPanelProps) {
+export function SchemaInfoPanel({ info, elementFormDefault, onChange, onDirectChange, isDirty, isDirectDirty }: SchemaInfoPanelProps) {
   return (
     <div className="flex flex-col gap-0.5">
       <SectionHeader title="General" />
       <TextField label="Standard" value={info.standard} onChange={(v) => onChange("standard", v)} dirty={isDirty("standard")} />
       <TextField label="Root Reference" value={info.rootReference ?? ""} onChange={(v) => onChange("rootReference", v || null)} dirty={isDirty("rootReference")} />
+      <EnumField label="Element Form Default" value={elementFormDefault} options={elementFormDefaultOptions} onChange={(v) => onDirectChange("elementFormDefault", v)} dirty={isDirectDirty("elementFormDefault")} />
       <EnumField label="Case" value={info.case} options={caseOptions} onChange={(v) => onChange("case", v)} dirty={isDirty("case")} />
       <NumberField label="Code Page" value={info.codePage} onChange={(v) => onChange("codePage", v)} dirty={isDirty("codePage")} />
       <TextField label="Culture" value={info.cultureName ?? ""} onChange={(v) => onChange("cultureName", v || null)} placeholder="invariant" dirty={isDirty("cultureName")} />

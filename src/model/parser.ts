@@ -60,6 +60,7 @@ export function parseXsd(xsdText: string): FFSchemaNode {
   }
 
   const targetNamespace = schemaEl.getAttribute('targetNamespace') ?? '';
+  const elementFormDefault = schemaEl.getAttribute('elementFormDefault') ?? 'unqualified';
   const schemaInfo = parseSchemaInfo(schemaEl);
 
   // Find root element(s)
@@ -78,6 +79,7 @@ export function parseXsd(xsdText: string): FFSchemaNode {
     id: uid(),
     kind: 'schema',
     targetNamespace,
+    elementFormDefault,
     schemaInfo,
     children: [],
   };

@@ -144,6 +144,7 @@ interface FFNodeBase {
 export interface FFSchemaNode extends FFNodeBase {
   kind: 'schema';
   targetNamespace: string;
+  elementFormDefault: string;
   schemaInfo: SchemaInfo;
 }
 

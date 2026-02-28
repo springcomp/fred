@@ -64,7 +64,16 @@ export function PropertySheet() {
       </div>
 
       {/* Kind-specific panel */}
-      {node.kind === "schema" && <SchemaInfoPanel info={node.schemaInfo} onChange={makeOnChange("schemaInfo")} isDirty={makeIsDirty("schemaInfo")} />}
+      {node.kind === "schema" && (
+        <SchemaInfoPanel
+          info={node.schemaInfo}
+          elementFormDefault={node.elementFormDefault}
+          onChange={makeOnChange("schemaInfo")}
+          onDirectChange={onDirectChange}
+          isDirty={makeIsDirty("schemaInfo")}
+          isDirectDirty={isDirectDirty}
+        />
+      )}
 
       {node.kind === "record" && (
         <RecordInfoPanel

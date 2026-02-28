@@ -74,7 +74,7 @@ export function serializeXsd(schema: FFSchemaNode): string {
     `xmlns:b="${BTS_NS}"`,
     `xmlns:xs="${XS_NS}"`,
     schema.targetNamespace ? `targetNamespace="${escapeAttr(schema.targetNamespace)}"` : '',
-    'elementFormDefault="qualified"',
+    `elementFormDefault="${escapeAttr(schema.elementFormDefault)}"`,
   ]
     .filter(Boolean)
     .join('\n    ');

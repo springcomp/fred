@@ -1,8 +1,23 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { parseXsd } from "@/model/parser";
 import { serializeXsd, downloadAsFile } from "@/model/serializer";
-import { FolderOpen, Save, FilePlus } from "lucide-react";
+import { getInsertableKinds, type FFNode, type InsertableKind } from "@/model/types";
+import { nodeKindLabel } from "@/components/tree/NodeIcon";
+import {
+  FolderOpen,
+  Save,
+  FilePlus,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  Diamond,
+  ListOrdered,
+  GitBranch,
+  AtSign,
+} from "lucide-react";
 
 declare global {
   interface Window {
@@ -125,7 +140,18 @@ async function saveFileAs() {
 export function Toolbar() {
   const dirty = useEditorStore((s) => s.dirty);
   const hasSchema = useEditorStore((s) => s.schema !== null);
+  const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
+  const nodeMap = useEditorStore((s) => s.nodeMap);
+  const schema = useEditorStore((s) => s.schema);
+  const deleteNode = useEditorStore((s) => s.deleteNode);
+  const moveNodeUp = useEditorStore((s) => s.moveNodeUp);
+  const moveNodeDown = useEditorStore((s) => s.moveNodeDown);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
+  const isRoot = selectedNode?.id === schema?.id;
+  const canDelete = selectedNode != null && !isRoot;
+  const canMove = selectedNode != null && !isRoot;
 
   return (
     <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/50">
@@ -143,6 +169,33 @@ export function Toolbar() {
       <ToolbarButton icon={<FolderOpen size={16} />} label="Open" onClick={() => openFile(fileInputRef)} />
       <ToolbarButton icon={<Save size={16} />} label="Save" onClick={saveFile} disabled={!hasSchema} />
       <ToolbarButton icon={<FilePlus size={16} />} label="Save As" onClick={saveFileAs} disabled={!hasSchema} />
+
+      <ToolbarSeparator />
+
+      {/* Insert dropdown */}
+      <InsertDropdown node={selectedNode} />
+
+      <ToolbarButton
+        icon={<Trash2 size={16} />}
+        label="Delete"
+        onClick={() => selectedNodeId && deleteNode(selectedNodeId)}
+        disabled={!canDelete}
+      />
+
+      <ToolbarSeparator />
+
+      <ToolbarButton
+        icon={<ArrowUp size={16} />}
+        label="Move Up"
+        onClick={() => selectedNodeId && moveNodeUp(selectedNodeId)}
+        disabled={!canMove}
+      />
+      <ToolbarButton
+        icon={<ArrowDown size={16} />}
+        label="Move Down"
+        onClick={() => selectedNodeId && moveNodeDown(selectedNodeId)}
+        disabled={!canMove}
+      />
 
       {dirty && <span className="ml-2 text-xs text-muted-foreground italic">• unsaved changes</span>}
 
@@ -174,5 +227,79 @@ function ToolbarButton({
       {icon}
       <span>{label}</span>
     </button>
+  );
+}
+
+function ToolbarSeparator() {
+  return <div className="w-px h-5 mx-1 bg-border" />;
+}
+
+const insertKindIcon: Record<InsertableKind, React.ReactNode> = {
+  record: <FolderOpen size={14} className="text-node-record" />,
+  element: <Diamond size={14} className="text-node-element" />,
+  sequence: <ListOrdered size={14} className="text-node-sequence" />,
+  choice: <GitBranch size={14} className="text-node-choice" />,
+  attribute: <AtSign size={14} className="text-node-attribute" />,
+};
+
+function insertKindLabel(kind: InsertableKind): string {
+  return kind === "element" ? "Field" : nodeKindLabel(kind);
+}
+
+/** Dropdown button for inserting child nodes. */
+function InsertDropdown({ node }: { node: FFNode | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const addChildNode = useEditorStore((s) => s.addChildNode);
+
+  const validChildren = node ? getInsertableKinds(node) : [];
+  const disabled = validChildren.length === 0;
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-sm hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        title="Insert child node"
+      >
+        <Plus size={16} />
+        <span>Insert</span>
+        <ChevronDown size={12} />
+      </button>
+
+      {open && node && (
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-[150px] py-1 bg-background border border-border rounded-md shadow-lg text-sm">
+          {validChildren.map((kind) => (
+            <div
+              key={kind}
+              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-accent"
+              onClick={() => {
+                addChildNode(node.id, kind);
+                setOpen(false);
+              }}
+            >
+              {insertKindIcon[kind]}
+              <span>{insertKindLabel(kind)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -333,7 +333,7 @@ interface GroupInfoPanelProps {
   isDirectDirty: (property: string) => boolean;
 }
 
-export function GroupInfoPanel({ info, kind, minOccurs, maxOccurs, onChange, onDirectChange, isDirty, isDirectDirty }: GroupInfoPanelProps) {
+export function GroupInfoPanel({ info: _info, kind, minOccurs, maxOccurs, onChange: _onChange, onDirectChange, isDirty: _isDirty, isDirectDirty }: GroupInfoPanelProps) {
   const UNBOUNDED = Number.MAX_SAFE_INTEGER;
   const handleMinOccursChange = (v: number) => {
     onDirectChange("minOccurs", v);

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { FFNode, FFSchemaNode } from '@/model/types';
-import { buildNodeMap } from '@/model/types';
+import type { FFNode, FFSchemaNode, InsertableKind } from '@/model/types';
+import { buildNodeMap, createNewNode, getInsertableKinds } from '@/model/types';
 
 /** The info keys we snapshot for dirty-tracking. */
 const INFO_KEYS: Record<string, string> = {
@@ -97,6 +97,27 @@ export interface EditorState {
 
   /** Store the file handle after save-as. */
   setFileHandle: (handle: FileSystemFileHandle) => void;
+
+  /** Id of a newly inserted node that should enter inline-rename mode. */
+  pendingRenameNodeId: string | null;
+
+  /** Clear the pending rename flag (called after the tree picks it up). */
+  clearPendingRename: () => void;
+
+  /** Insert a new child node of the given kind under the target parent. */
+  addChildNode: (parentId: string, kind: InsertableKind) => void;
+
+  /** Insert a new sibling node after the target node. */
+  addSiblingAfter: (siblingId: string, kind: InsertableKind) => void;
+
+  /** Delete a node (and its descendants) from the tree. */
+  deleteNode: (nodeId: string) => void;
+
+  /** Move a node one position up among its siblings. */
+  moveNodeUp: (nodeId: string) => void;
+
+  /** Move a node one position down among its siblings. */
+  moveNodeDown: (nodeId: string) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -108,6 +129,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   originalValues: new Map(),
   dirtyNodeIds: new Set(),
   fileHandle: null,
+  pendingRenameNodeId: null,
 
   loadSchema: (schema, fileHandle) => {
     const nodeMap = buildNodeMap(schema);
@@ -220,7 +242,197 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
   setFileHandle: handle => set({ fileHandle: handle }),
+
+  clearPendingRename: () => set({ pendingRenameNodeId: null }),
+
+  addChildNode: (parentId, kind) => {
+    const { schema, nodeMap } = get();
+    if (!schema) {
+      return;
+    }
+
+    // Validate that this parent accepts this child kind
+    const parent = nodeMap.get(parentId);
+    if (!parent) {
+      return;
+    }
+    if (!getInsertableKinds(parent).includes(kind)) {
+      return;
+    }
+
+    const newSchema = structuredClone(schema);
+    const newMap = buildNodeMap(newSchema);
+    const parentNode = newMap.get(parentId);
+    if (!parentNode) {
+      return;
+    }
+
+    const newNode = createNewNode(kind, newMap);
+
+    // Record children redirect: elements and records go into the immediate group.
+    // Attributes are inserted before the group; the group is always the last child.
+    if (parentNode.kind === 'record' && (kind === 'element' || kind === 'record')) {
+      const group = parentNode.children.find(c => c.kind === 'sequence' || c.kind === 'choice');
+      if (!group) {
+        return; // no group to insert into
+      }
+      group.children.push(newNode);
+    } else if (parentNode.kind === 'record' && kind === 'attribute') {
+      // Insert attribute before the group (keep attributes at the start)
+      const groupIdx = parentNode.children.findIndex(c => c.kind === 'sequence' || c.kind === 'choice');
+      if (groupIdx >= 0) {
+        parentNode.children.splice(groupIdx, 0, newNode);
+      } else {
+        parentNode.children.push(newNode);
+      }
+    } else {
+      parentNode.children.push(newNode);
+    }
+
+    // Rebuild map to include the new node
+    const finalMap = buildNodeMap(newSchema);
+    const needsRename = kind === 'record' || kind === 'element' || kind === 'attribute';
+    set({
+      schema: newSchema,
+      nodeMap: finalMap,
+      selectedNodeId: newNode.id,
+      dirty: true,
+      pendingRenameNodeId: needsRename ? newNode.id : null,
+    });
+  },
+
+  addSiblingAfter: (siblingId, kind) => {
+    const { schema } = get();
+    if (!schema) {
+      return;
+    }
+
+    // Find parent of sibling
+    const parentEntry = findParent(schema, siblingId);
+    if (!parentEntry) {
+      return;
+    }
+    const { parent } = parentEntry;
+    if (!getInsertableKinds(parent).includes(kind)) {
+      return;
+    }
+
+    const newSchema = structuredClone(schema);
+    const newMap = buildNodeMap(newSchema);
+
+    // Find cloned parent and sibling index
+    const clonedParent = findParent(newSchema, siblingId);
+    if (!clonedParent) {
+      return;
+    }
+    const { parent: pNode, index: sibIdx } = clonedParent;
+
+    const newNode = createNewNode(kind, newMap);
+    pNode.children.splice(sibIdx + 1, 0, newNode);
+
+    const finalMap = buildNodeMap(newSchema);
+    const needsRename = kind === 'record' || kind === 'element' || kind === 'attribute';
+    set({
+      schema: newSchema,
+      nodeMap: finalMap,
+      selectedNodeId: newNode.id,
+      dirty: true,
+      pendingRenameNodeId: needsRename ? newNode.id : null,
+    });
+  },
+
+  deleteNode: nodeId => {
+    const { schema } = get();
+    if (!schema) {
+      return;
+    }
+    // Don't delete the schema root
+    if (schema.id === nodeId) {
+      return;
+    }
+
+    const newSchema = structuredClone(schema);
+    const parentEntry = findParent(newSchema, nodeId);
+    if (!parentEntry) {
+      return;
+    }
+
+    const { parent, index } = parentEntry;
+    parent.children.splice(index, 1);
+
+    const finalMap = buildNodeMap(newSchema);
+    // Select the parent after deletion
+    set({
+      schema: newSchema,
+      nodeMap: finalMap,
+      selectedNodeId: parent.id,
+      dirty: true,
+    });
+  },
+
+  moveNodeUp: nodeId => {
+    const { schema } = get();
+    if (!schema) {
+      return;
+    }
+
+    const newSchema = structuredClone(schema);
+    const parentEntry = findParent(newSchema, nodeId);
+    if (!parentEntry || parentEntry.index === 0) {
+      return;
+    }
+
+    const { parent, index } = parentEntry;
+    const [removed] = parent.children.splice(index, 1);
+    parent.children.splice(index - 1, 0, removed);
+
+    const finalMap = buildNodeMap(newSchema);
+    set({ schema: newSchema, nodeMap: finalMap, dirty: true });
+  },
+
+  moveNodeDown: nodeId => {
+    const { schema } = get();
+    if (!schema) {
+      return;
+    }
+
+    const newSchema = structuredClone(schema);
+    const parentEntry = findParent(newSchema, nodeId);
+    if (!parentEntry) {
+      return;
+    }
+
+    const { parent, index } = parentEntry;
+    if (index >= parent.children.length - 1) {
+      return;
+    }
+
+    const [removed] = parent.children.splice(index, 1);
+    parent.children.splice(index + 1, 0, removed);
+
+    const finalMap = buildNodeMap(newSchema);
+    set({ schema: newSchema, nodeMap: finalMap, dirty: true });
+  },
 }));
+
+// ─── Internal Helpers ───────────────────────────────────────────────────────
+
+/** Walk the tree and return the parent node + index of the child with the given id. */
+function findParent(root: FFNode, childId: string): { parent: FFNode; index: number } | null {
+  function walk(node: FFNode): { parent: FFNode; index: number } | null {
+    for (let i = 0; i < node.children.length; i++) {
+      if (node.children[i].id === childId) {
+        return { parent: node, index: i };
+      }
+      const found = walk(node.children[i]);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+  return walk(root);
+}
 
 // ─── Selectors ──────────────────────────────────────────────────────────────
 

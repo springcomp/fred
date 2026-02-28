@@ -4,6 +4,7 @@ import { useEditorStore } from "@/store/editorStore";
 import { NodeIcon, nodeKindLabel } from "./NodeIcon";
 import { getNodeLabel, type FFNode, type FFOccurrenceNode } from "@/model/types";
 import { Badge } from "@/components/ui/Badge";
+import { ContextMenu, type MenuPosition } from "./ContextMenu";
 
 /** Node kinds that have minOccurs / maxOccurs. */
 const OCCURRENCE_KINDS = new Set<FFNode["kind"]>(["record", "element", "sequence", "choice"]);
@@ -32,6 +33,8 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
   const selectNode = useEditorStore((s) => s.selectNode);
   const updateNodeDirect = useEditorStore((s) => s.updateNodeDirect);
   const dirtyNodeIds = useEditorStore((s) => s.dirtyNodeIds);
+  const pendingRenameNodeId = useEditorStore((s) => s.pendingRenameNodeId);
+  const clearPendingRename = useEditorStore((s) => s.clearPendingRename);
   const isSelected = selectedNodeId === data.id;
   const isDirty = dirtyNodeIds.has(data.id);
 
@@ -40,6 +43,15 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const canEdit = EDITABLE_KINDS.has(data.kind);
+
+  // Auto-enter inline rename for newly inserted nodes
+  useEffect(() => {
+    if (pendingRenameNodeId === data.id && canEdit) {
+      setEditValue(getNodeLabel(data));
+      setEditing(true);
+      clearPendingRename();
+    }
+  }, [pendingRenameNodeId, data, canEdit, clearPendingRename]);
 
   const commitRename = useCallback(() => {
     const trimmed = editValue.trim();
@@ -52,7 +64,7 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
 
   const cancelRename = useCallback(() => {
     setEditing(false);
-  });
+  }, []);
 
   // Auto-focus and select all text when entering edit mode
   useEffect(() => {
@@ -73,6 +85,21 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
     }
   };
 
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectNode(data.id);
+      // Dispatch a custom event so the tree container can show the menu
+      window.dispatchEvent(
+        new CustomEvent("tree-context-menu", {
+          detail: { x: e.clientX, y: e.clientY, nodeId: data.id },
+        }),
+      );
+    },
+    [data.id, selectNode],
+  );
+
   return (
     <div
       ref={dragHandle}
@@ -84,6 +111,7 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
         e.stopPropagation();
         selectNode(data.id);
       }}
+      onContextMenu={handleContextMenu}
     >
       <span
         className="cursor-pointer shrink-0 w-4 text-center text-xs text-muted-foreground"
@@ -132,6 +160,17 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
 
 export function SchemaTree() {
   const schema = useEditorStore((s) => s.schema);
+  const [menuPos, setMenuPos] = useState<MenuPosition | null>(null);
+
+  // Listen for context-menu events dispatched by Node rows
+  useEffect(() => {
+    function handleTreeContextMenu(e: Event) {
+      const detail = (e as CustomEvent).detail as MenuPosition;
+      setMenuPos(detail);
+    }
+    window.addEventListener("tree-context-menu", handleTreeContextMenu);
+    return () => window.removeEventListener("tree-context-menu", handleTreeContextMenu);
+  }, []);
 
   if (!schema) {
     return (
@@ -142,7 +181,12 @@ export function SchemaTree() {
   }
 
   return (
-    <AutoSizeTree schema={schema} />
+    <>
+      <AutoSizeTree schema={schema} />
+      {menuPos && (
+        <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />
+      )}
+    </>
   );
 }
 

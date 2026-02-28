@@ -268,6 +268,145 @@ export function createDefaultGroupInfo(): GroupInfo {
   return { sequenceNumber: 0 };
 }
 
+// ─── Node Creation ──────────────────────────────────────────────────────────
+
+let _nextId = 1000;
+
+/** Generate a unique node id. Starts at 1000 to avoid collisions with parser-generated ids. */
+export function generateNodeId(): string {
+  return `n${_nextId++}`;
+}
+
+/** The insertable node kinds (not schema, not attribute). */
+export type InsertableKind = 'record' | 'element' | 'sequence' | 'choice' | 'attribute';
+
+/** Which child kinds each parent kind supports. */
+export const VALID_CHILDREN: Record<FFNode['kind'], InsertableKind[]> = {
+  schema: ['record'],
+  record: ['record', 'element', 'sequence', 'choice'],
+  sequence: ['record', 'element', 'sequence', 'choice'],
+  choice: ['record', 'element', 'sequence', 'choice'],
+  element: [],
+  attribute: [],
+};
+
+/** Return the insertable kinds available for a given node, taking into account
+ *  record constraints: a record may have at most one group (sequence/choice)
+ *  and cannot have direct element children. */
+export function getInsertableKinds(node: FFNode): InsertableKind[] {
+  if (node.kind === 'record') {
+    const hasGroup = node.children.some(c => c.kind === 'sequence' || c.kind === 'choice');
+    // If the record already has a group, offer record/element (redirected to group) + attribute.
+    // If not, offer sequence/choice so the user creates one first, + attribute.
+    return hasGroup ? ['record', 'element', 'attribute'] : ['sequence', 'choice', 'attribute'];
+  }
+  return VALID_CHILDREN[node.kind];
+}
+
+/** Return the kinds available for "Insert After" (sibling insertion).
+ *  - A group (sequence/choice) that is a direct child of a record cannot have
+ *    siblings of its own kind because a record allows at most one group.
+ *  - A record cannot have element siblings (fields are not valid siblings for records). */
+export function getSiblingInsertableKinds(parent: FFNode, child: FFNode): InsertableKind[] {
+  if (parent.kind === 'record' && (child.kind === 'sequence' || child.kind === 'choice')) {
+    return [];
+  }
+  const kinds = getInsertableKinds(parent);
+  if (child.kind === 'record') {
+    return kinds.filter(k => k !== 'element');
+  }
+  return kinds;
+}
+
+/** Auto-generate a unique name like "Record1", "Field2", etc.
+ *  Scans the existing tree to avoid collisions. */
+export function generateNodeName(kind: InsertableKind, nodeMap: Map<string, FFNode>): string {
+  const prefix =
+    kind === 'element' ? 'Field' : kind === 'attribute' ? 'Attribute' : kind.charAt(0).toUpperCase() + kind.slice(1);
+  const existing = new Set<string>();
+  for (const n of nodeMap.values()) {
+    if ('name' in n) {
+      existing.add((n as FFRecordNode | FFElementNode).name);
+    }
+  }
+  let i = 1;
+  while (existing.has(`${prefix}${i}`)) {
+    i++;
+  }
+  return `${prefix}${i}`;
+}
+
+/** Create a new node of the given kind with sensible defaults. */
+export function createNewNode(kind: InsertableKind, nodeMap: Map<string, FFNode>): FFNode {
+  const id = generateNodeId();
+  switch (kind) {
+    case 'record': {
+      // New records automatically get an empty sequence group
+      const seqId = generateNodeId();
+      return {
+        id,
+        kind: 'record',
+        name: generateNodeName('record', nodeMap),
+        namespace: '',
+        minOccurs: 1,
+        maxOccurs: 1,
+        recordInfo: createDefaultRecordInfo(),
+        children: [
+          {
+            id: seqId,
+            kind: 'sequence',
+            minOccurs: 1,
+            maxOccurs: 1,
+            groupInfo: createDefaultGroupInfo(),
+            children: [],
+          },
+        ],
+      };
+    }
+    case 'element':
+      return {
+        id,
+        kind: 'element',
+        name: generateNodeName('element', nodeMap),
+        namespace: '',
+        dataType: 'xs:string',
+        minOccurs: 1,
+        maxOccurs: 1,
+        fieldInfo: createDefaultFieldInfo(),
+        children: [],
+      };
+    case 'attribute':
+      return {
+        id,
+        kind: 'attribute',
+        name: generateNodeName('attribute', nodeMap),
+        namespace: '',
+        dataType: 'xs:string',
+        use: XmlSchemaUse.Optional,
+        fieldInfo: createDefaultFieldInfo(),
+        children: [],
+      };
+    case 'sequence':
+      return {
+        id,
+        kind: 'sequence',
+        minOccurs: 1,
+        maxOccurs: 1,
+        groupInfo: createDefaultGroupInfo(),
+        children: [],
+      };
+    case 'choice':
+      return {
+        id,
+        kind: 'choice',
+        minOccurs: 1,
+        maxOccurs: 1,
+        groupInfo: createDefaultGroupInfo(),
+        children: [],
+      };
+  }
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /** Get a display label for a node. */

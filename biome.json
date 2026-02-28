@@ -1,5 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+  "css": { "parser": { "cssModules": false, "tailwindDirectives": true } },
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
   "files": { "ignoreUnknown": false, "includes": ["**", "!**/dist", "!**/coverage"] },
   "formatter": {

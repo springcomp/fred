@@ -6,21 +6,21 @@
 
 import {
   CharacterType,
-  XmlSchemaUse,
-  type FFNode,
-  type FFSchemaNode,
-  type FFRecordNode,
-  type FFElementNode,
+  createDefaultFieldInfo,
+  createDefaultRecordInfo,
+  createDefaultSchemaInfo,
   type FFAttributeNode,
-  type FFSequenceNode,
   type FFChoiceNode,
-  type SchemaInfo,
-  type RecordInfo,
+  type FFElementNode,
+  type FFNode,
+  type FFRecordNode,
+  type FFSchemaNode,
+  type FFSequenceNode,
   type FieldInfo,
   type GroupInfo,
-  createDefaultSchemaInfo,
-  createDefaultRecordInfo,
-  createDefaultFieldInfo,
+  type RecordInfo,
+  type SchemaInfo,
+  XmlSchemaUse,
 } from './types';
 
 const XS_NS = 'http://www.w3.org/2001/XMLSchema';

@@ -1,23 +1,23 @@
-import { useRef, useState, useEffect } from "react";
-import { useEditorStore } from "@/store/editorStore";
-import { parseXsd } from "@/model/parser";
-import { serializeXsd, downloadAsFile } from "@/model/serializer";
-import { getInsertableKinds, type FFNode, type InsertableKind } from "@/model/types";
-import { nodeKindLabel } from "@/components/tree/NodeIcon";
 import {
-  FolderOpen,
-  Save,
-  FilePlus,
-  Plus,
-  Trash2,
-  ArrowUp,
   ArrowDown,
+  ArrowUp,
+  AtSign,
   ChevronDown,
   Diamond,
-  ListOrdered,
+  FilePlus,
+  FolderOpen,
   GitBranch,
-  AtSign,
-} from "lucide-react";
+  ListOrdered,
+  Plus,
+  Save,
+  Trash2,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { nodeKindLabel } from '@/components/tree/NodeIcon';
+import { parseXsd } from '@/model/parser';
+import { downloadAsFile, serializeXsd } from '@/model/serializer';
+import { type FFNode, getInsertableKinds, type InsertableKind } from '@/model/types';
+import { useEditorStore } from '@/store/editorStore';
 
 declare global {
   interface Window {
@@ -38,7 +38,7 @@ declare global {
   }
 }
 
-const supportsFilePicker = typeof window !== "undefined" && typeof window.showOpenFilePicker === "function";
+const supportsFilePicker = typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
 
 /** Read an XSD file from text and load it into the store. */
 function loadFromText(text: string, handle?: FileSystemFileHandle) {
@@ -49,7 +49,7 @@ function loadFromText(text: string, handle?: FileSystemFileHandle) {
 /** Open via modern File System Access API (Chromium). */
 async function openFileNative() {
   const [handle] = await window.showOpenFilePicker!({
-    types: [{ description: "XSD Schema files", accept: { "application/xml": [".xsd", ".xml"] } }],
+    types: [{ description: 'XSD Schema files', accept: { 'application/xml': ['.xsd', '.xml'] } }],
   });
   const file = await handle.getFile();
   const text = await file.text();
@@ -62,8 +62,8 @@ function openFileFallback(input: HTMLInputElement) {
   if (!file) {
     return;
   }
-  file.text().then((text) => loadFromText(text));
-  input.value = ""; // reset so same file can be re-selected
+  file.text().then(text => loadFromText(text));
+  input.value = ''; // reset so same file can be re-selected
 }
 
 async function openFile(inputRef: React.RefObject<HTMLInputElement | null>) {
@@ -74,8 +74,8 @@ async function openFile(inputRef: React.RefObject<HTMLInputElement | null>) {
       inputRef.current?.click();
     }
   } catch (e) {
-    if ((e as Error).name !== "AbortError") {
-      console.error("Failed to open file:", e);
+    if ((e as Error).name !== 'AbortError') {
+      console.error('Failed to open file:', e);
     }
   }
 }
@@ -95,13 +95,13 @@ async function saveFile() {
       await writable.close();
       useEditorStore.getState().markClean();
     } catch (e) {
-      if ((e as Error).name !== "AbortError") {
-        console.error("Failed to save file:", e);
+      if ((e as Error).name !== 'AbortError') {
+        console.error('Failed to save file:', e);
       }
     }
   } else {
     // Fallback: trigger download
-    downloadAsFile(xsd, "schema.xsd");
+    downloadAsFile(xsd, 'schema.xsd');
     useEditorStore.getState().markClean();
   }
 }
@@ -117,8 +117,8 @@ async function saveFileAs() {
   try {
     if (supportsFilePicker) {
       const handle = await window.showSaveFilePicker!({
-        suggestedName: "schema.xsd",
-        types: [{ description: "XSD Schema files", accept: { "application/xml": [".xsd"] } }],
+        suggestedName: 'schema.xsd',
+        types: [{ description: 'XSD Schema files', accept: { 'application/xml': ['.xsd'] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(xsd);
@@ -127,28 +127,28 @@ async function saveFileAs() {
       useEditorStore.getState().markClean();
     } else {
       // Fallback: trigger download
-      downloadAsFile(xsd, "schema.xsd");
+      downloadAsFile(xsd, 'schema.xsd');
       useEditorStore.getState().markClean();
     }
   } catch (e) {
-    if ((e as Error).name !== "AbortError") {
-      console.error("Failed to save file:", e);
+    if ((e as Error).name !== 'AbortError') {
+      console.error('Failed to save file:', e);
     }
   }
 }
 
 export function Toolbar() {
-  const dirty = useEditorStore((s) => s.dirty);
-  const hasSchema = useEditorStore((s) => s.schema !== null);
-  const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
-  const nodeMap = useEditorStore((s) => s.nodeMap);
-  const schema = useEditorStore((s) => s.schema);
-  const deleteNode = useEditorStore((s) => s.deleteNode);
-  const moveNodeUp = useEditorStore((s) => s.moveNodeUp);
-  const moveNodeDown = useEditorStore((s) => s.moveNodeDown);
+  const dirty = useEditorStore(s => s.dirty);
+  const hasSchema = useEditorStore(s => s.schema !== null);
+  const selectedNodeId = useEditorStore(s => s.selectedNodeId);
+  const nodeMap = useEditorStore(s => s.nodeMap);
+  const schema = useEditorStore(s => s.schema);
+  const deleteNode = useEditorStore(s => s.deleteNode);
+  const moveNodeUp = useEditorStore(s => s.moveNodeUp);
+  const moveNodeDown = useEditorStore(s => s.moveNodeDown);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
+  const selectedNode = selectedNodeId ? (nodeMap.get(selectedNodeId) ?? null) : null;
   const isRoot = selectedNode?.id === schema?.id;
   const canDelete = selectedNode != null && !isRoot;
   const canMove = selectedNode != null && !isRoot;
@@ -163,7 +163,7 @@ export function Toolbar() {
         type="file"
         accept=".xsd,.xml"
         className="hidden"
-        onChange={(e) => openFileFallback(e.target as HTMLInputElement)}
+        onChange={e => openFileFallback(e.target as HTMLInputElement)}
       />
 
       <ToolbarButton icon={<FolderOpen size={16} />} label="Open" onClick={() => openFile(fileInputRef)} />
@@ -243,14 +243,14 @@ const insertKindIcon: Record<InsertableKind, React.ReactNode> = {
 };
 
 function insertKindLabel(kind: InsertableKind): string {
-  return kind === "element" ? "Field" : nodeKindLabel(kind);
+  return kind === 'element' ? 'Field' : nodeKindLabel(kind);
 }
 
 /** Dropdown button for inserting child nodes. */
 function InsertDropdown({ node }: { node: FFNode | null }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const addChildNode = useEditorStore((s) => s.addChildNode);
+  const addChildNode = useEditorStore(s => s.addChildNode);
 
   const validChildren = node ? getInsertableKinds(node) : [];
   const disabled = validChildren.length === 0;
@@ -265,8 +265,8 @@ function InsertDropdown({ node }: { node: FFNode | null }) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
   return (
@@ -275,7 +275,7 @@ function InsertDropdown({ node }: { node: FFNode | null }) {
         type="button"
         className="flex items-center gap-1 px-2 py-1 rounded-md text-sm hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(v => !v)}
         title="Insert child node"
       >
         <Plus size={16} />
@@ -285,7 +285,7 @@ function InsertDropdown({ node }: { node: FFNode | null }) {
 
       {open && node && (
         <div className="absolute left-0 top-full mt-1 z-50 min-w-[150px] py-1 bg-background border border-border rounded-md shadow-lg text-sm">
-          {validChildren.map((kind) => (
+          {validChildren.map(kind => (
             <div
               key={kind}
               className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-accent"

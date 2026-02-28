@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface SplitPaneProps {
   left: React.ReactNode;
@@ -8,13 +8,7 @@ interface SplitPaneProps {
   maxWidth?: number;
 }
 
-export function SplitPane({
-  left,
-  right,
-  defaultWidth = 360,
-  minWidth = 200,
-  maxWidth = 600,
-}: SplitPaneProps) {
+export function SplitPane({ left, right, defaultWidth = 360, minWidth = 200, maxWidth = 600 }: SplitPaneProps) {
   const [width, setWidth] = useState(defaultWidth);
   const dragging = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -22,8 +16,8 @@ export function SplitPane({
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     dragging.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
   }, []);
 
   useEffect(() => {
@@ -39,26 +33,23 @@ export function SplitPane({
     const onMouseUp = () => {
       if (dragging.current) {
         dragging.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
       }
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
   }, [minWidth, maxWidth]);
 
   return (
     <div ref={containerRef} className="flex flex-1 overflow-hidden">
       {/* Left panel */}
-      <div
-        className="overflow-auto border-r border-border shrink-0"
-        style={{ width }}
-      >
+      <div className="overflow-auto border-r border-border shrink-0" style={{ width }}>
         {left}
       </div>
 

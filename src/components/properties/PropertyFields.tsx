@@ -1,8 +1,8 @@
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import { Select } from "@/components/ui/Select";
-import { Switch } from "@/components/ui/Switch";
-import { CharacterType } from "@/model/types";
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
+import { Select } from '@/components/ui/Select';
+import { Switch } from '@/components/ui/Switch';
+import { CharacterType } from '@/model/types';
 
 // ─── Generic Property Field Components ──────────────────────────────────────
 
@@ -16,7 +16,7 @@ interface BoolFieldProps {
 export function BoolField({ label, value, onChange, dirty }: BoolFieldProps) {
   return (
     <div className="flex items-center justify-between gap-2 py-1">
-      <Label className={dirty ? "font-bold" : ""}>{label}</Label>
+      <Label className={dirty ? 'font-bold' : ''}>{label}</Label>
       <Switch checked={value} onCheckedChange={onChange} />
     </div>
   );
@@ -34,14 +34,14 @@ interface TextFieldProps {
 export function TextField({ label, value, onChange, placeholder, readOnly, dirty }: TextFieldProps) {
   return (
     <div className="flex flex-col gap-1 py-1">
-      <Label className={dirty ? "font-bold" : ""}>{label}</Label>
+      <Label className={dirty ? 'font-bold' : ''}>{label}</Label>
       <Input
         value={value}
         placeholder={placeholder}
         readOnly={readOnly}
         disabled={readOnly}
-        className={readOnly ? "opacity-50 cursor-not-allowed" : ""}
-        onChange={(e) => onChange(e.target.value)}
+        className={readOnly ? 'opacity-50 cursor-not-allowed' : ''}
+        onChange={e => onChange(e.target.value)}
       />
     </div>
   );
@@ -60,7 +60,7 @@ interface NumberFieldProps {
 export function NumberField({ label, value, onChange, min, max, readOnly, dirty }: NumberFieldProps) {
   return (
     <div className="flex flex-col gap-1 py-1">
-      <Label className={dirty ? "font-bold" : ""}>{label}</Label>
+      <Label className={dirty ? 'font-bold' : ''}>{label}</Label>
       <Input
         type="number"
         value={value}
@@ -68,8 +68,8 @@ export function NumberField({ label, value, onChange, min, max, readOnly, dirty 
         max={max}
         readOnly={readOnly}
         disabled={readOnly}
-        className={readOnly ? "opacity-50 cursor-not-allowed" : ""}
-        onChange={(e) => {
+        className={readOnly ? 'opacity-50 cursor-not-allowed' : ''}
+        onChange={e => {
           const n = Number.parseInt(e.target.value, 10);
           if (!Number.isNaN(n)) {
             onChange(n);
@@ -91,8 +91,8 @@ interface EnumFieldProps<T extends string> {
 export function EnumField<T extends string>({ label, value, options, onChange, dirty }: EnumFieldProps<T>) {
   return (
     <div className="flex flex-col gap-1 py-1">
-      <Label className={dirty ? "font-bold" : ""}>{label}</Label>
-      <Select value={value} onChange={(e) => onChange(e.target.value as T)}>
+      <Label className={dirty ? 'font-bold' : ''}>{label}</Label>
+      <Select value={value} onChange={e => onChange(e.target.value as T)}>
         {Object.entries(options).map(([display, val]) => (
           <option key={val} value={val}>
             {display}
@@ -128,8 +128,8 @@ export function CharacterPairField({
   const charReadOnly = charTypeValue === CharacterType.None || charTypeValue === CharacterType.Default;
   return (
     <div className="flex flex-col gap-1 py-1">
-      <Label className={dirty ? "font-bold" : ""}>{label}</Label>
-      <Select value={charTypeValue} onChange={(e) => onCharTypeChange(e.target.value)}>
+      <Label className={dirty ? 'font-bold' : ''}>{label}</Label>
+      <Select value={charTypeValue} onChange={e => onCharTypeChange(e.target.value)}>
         {Object.entries(charTypeOptions).map(([display, val]) => (
           <option key={val} value={val}>
             {display}
@@ -137,11 +137,11 @@ export function CharacterPairField({
         ))}
       </Select>
       <Input
-        className={charReadOnly ? "opacity-50 cursor-not-allowed" : ""}
+        className={charReadOnly ? 'opacity-50 cursor-not-allowed' : ''}
         value={charValue}
         readOnly={charReadOnly}
         disabled={charReadOnly}
-        onChange={(e) => onCharChange(e.target.value)}
+        onChange={e => onCharChange(e.target.value)}
         placeholder="value"
       />
     </div>
@@ -151,7 +151,11 @@ export function CharacterPairField({
 // ─── Section Header ─────────────────────────────────────────────────────────
 
 export function SectionHeader({ title }: { title: string }) {
-  return <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-3 pb-1 border-b border-border">{title}</h3>;
+  return (
+    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-3 pb-1 border-b border-border">
+      {title}
+    </h3>
+  );
 }
 
 // ─── MaxOccurs Field ────────────────────────────────────────────────────────
@@ -178,7 +182,7 @@ export function MaxOccursField({ label, value, minOccurs, onChange, dirty }: Max
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.trim();
-    if (raw === "") {
+    if (raw === '') {
       return;
     }
     const n = Number.parseInt(raw, 10);
@@ -190,15 +194,10 @@ export function MaxOccursField({ label, value, minOccurs, onChange, dirty }: Max
   return (
     <div className="flex flex-col gap-1 py-1">
       <div className="flex items-center gap-2">
-        <Label className={dirty ? "font-bold" : ""}>{label}</Label>
+        <Label className={dirty ? 'font-bold' : ''}>{label}</Label>
         {isUnbounded && <span className="text-xs text-muted-foreground italic">unbounded</span>}
       </div>
-      <Input
-        type="number"
-        value={displayValue}
-        min={unboundedDisplay}
-        onChange={handleChange}
-      />
+      <Input type="number" value={displayValue} min={unboundedDisplay} onChange={handleChange} />
     </div>
   );
 }

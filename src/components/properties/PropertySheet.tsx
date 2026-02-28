@@ -1,13 +1,13 @@
-import { useSelectedNode, useEditorStore } from "@/store/editorStore";
-import { NodeIcon, nodeKindLabel } from "@/components/tree/NodeIcon";
-import { SchemaInfoPanel, RecordInfoPanel, FieldInfoPanel, GroupInfoPanel } from "./InfoPanels";
-import { useCallback } from "react";
+import { useCallback } from 'react';
+import { NodeIcon, nodeKindLabel } from '@/components/tree/NodeIcon';
+import { useEditorStore, useSelectedNode } from '@/store/editorStore';
+import { FieldInfoPanel, GroupInfoPanel, RecordInfoPanel, SchemaInfoPanel } from './InfoPanels';
 
 export function PropertySheet() {
   const node = useSelectedNode();
-  const updateNodeProperty = useEditorStore((s) => s.updateNodeProperty);
-  const updateNodeDirect = useEditorStore((s) => s.updateNodeDirect);
-  const dirtyPaths = useEditorStore((s) => s.dirtyPaths);
+  const updateNodeProperty = useEditorStore(s => s.updateNodeProperty);
+  const updateNodeDirect = useEditorStore(s => s.updateNodeDirect);
+  const dirtyPaths = useEditorStore(s => s.dirtyPaths);
 
   const makeOnChange = useCallback(
     (infoKey: string) => (property: string, value: unknown) => {
@@ -64,65 +64,65 @@ export function PropertySheet() {
       </div>
 
       {/* Kind-specific panel */}
-      {node.kind === "schema" && (
+      {node.kind === 'schema' && (
         <SchemaInfoPanel
           info={node.schemaInfo}
           elementFormDefault={node.elementFormDefault}
-          onChange={makeOnChange("schemaInfo")}
+          onChange={makeOnChange('schemaInfo')}
           onDirectChange={onDirectChange}
-          isDirty={makeIsDirty("schemaInfo")}
+          isDirty={makeIsDirty('schemaInfo')}
           isDirectDirty={isDirectDirty}
         />
       )}
 
-      {node.kind === "record" && (
+      {node.kind === 'record' && (
         <RecordInfoPanel
           info={node.recordInfo}
           name={node.name}
           minOccurs={node.minOccurs}
           maxOccurs={node.maxOccurs}
-          onChange={makeOnChange("recordInfo")}
+          onChange={makeOnChange('recordInfo')}
           onDirectChange={onDirectChange}
-          isDirty={makeIsDirty("recordInfo")}
+          isDirty={makeIsDirty('recordInfo')}
           isDirectDirty={isDirectDirty}
         />
       )}
 
-      {node.kind === "element" && (
+      {node.kind === 'element' && (
         <FieldInfoPanel
           info={node.fieldInfo}
           name={node.name}
           dataType={node.dataType}
-          onChange={makeOnChange("fieldInfo")}
+          onChange={makeOnChange('fieldInfo')}
           onDirectChange={onDirectChange}
-          isDirty={makeIsDirty("fieldInfo")}
+          isDirty={makeIsDirty('fieldInfo')}
           isDirectDirty={isDirectDirty}
         />
       )}
 
-      {node.kind === "attribute" && (
+      {node.kind === 'attribute' && (
         <FieldInfoPanel
           info={node.fieldInfo}
           name={node.name}
           dataType={node.dataType}
           isAttribute
           use={node.use}
-          onChange={makeOnChange("fieldInfo")}
+          onChange={makeOnChange('fieldInfo')}
           onDirectChange={onDirectChange}
-          isDirty={makeIsDirty("fieldInfo")}
+          isDirty={makeIsDirty('fieldInfo')}
           isDirectDirty={isDirectDirty}
         />
       )}
 
-      {(node.kind === "sequence" || node.kind === "choice") && (
+      {(node.kind === 'sequence' || node.kind === 'choice') && (
         <GroupInfoPanel
           info={node.groupInfo}
           kind={node.kind}
           minOccurs={node.minOccurs}
           maxOccurs={node.maxOccurs}
-          onChange={makeOnChange("groupInfo")}
+          onChange={makeOnChange('groupInfo')}
           onDirectChange={onDirectChange}
-          isDirty={makeIsDirty("groupInfo")}
+          isDirty={makeIsDirty('groupInfo')}
           isDirectDirty={isDirectDirty}
         />
       )}

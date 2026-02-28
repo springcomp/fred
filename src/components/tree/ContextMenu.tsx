@@ -1,19 +1,19 @@
-import { useEffect, useRef, useCallback, useState } from "react";
-import { useEditorStore } from "@/store/editorStore";
-import { getInsertableKinds, getSiblingInsertableKinds, type FFNode, type InsertableKind } from "@/model/types";
-import { nodeKindLabel } from "./NodeIcon";
 import {
-  FolderOpen,
-  Diamond,
-  ListOrdered,
-  GitBranch,
+  ArrowDown,
+  ArrowUp,
   AtSign,
+  ChevronRight,
+  Diamond,
+  FolderOpen,
+  GitBranch,
+  ListOrdered,
   Plus,
   Trash2,
-  ArrowUp,
-  ArrowDown,
-  ChevronRight,
-} from "lucide-react";
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { type FFNode, getInsertableKinds, getSiblingInsertableKinds, type InsertableKind } from '@/model/types';
+import { useEditorStore } from '@/store/editorStore';
+import { nodeKindLabel } from './NodeIcon';
 
 /** Position for the context menu. */
 export interface MenuPosition {
@@ -31,26 +31,20 @@ const kindIcon: Record<InsertableKind, React.ReactNode> = {
 };
 
 function kindLabel(kind: InsertableKind): string {
-  return kind === "element" ? "Field" : nodeKindLabel(kind);
+  return kind === 'element' ? 'Field' : nodeKindLabel(kind);
 }
 
-export function ContextMenu({
-  position,
-  onClose,
-}: {
-  position: MenuPosition;
-  onClose: () => void;
-}) {
+export function ContextMenu({ position, onClose }: { position: MenuPosition; onClose: () => void }) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const nodeMap = useEditorStore((s) => s.nodeMap);
-  const schema = useEditorStore((s) => s.schema);
-  const addChildNode = useEditorStore((s) => s.addChildNode);
-  const addSiblingAfter = useEditorStore((s) => s.addSiblingAfter);
-  const deleteNode = useEditorStore((s) => s.deleteNode);
-  const moveNodeUp = useEditorStore((s) => s.moveNodeUp);
-  const moveNodeDown = useEditorStore((s) => s.moveNodeDown);
+  const nodeMap = useEditorStore(s => s.nodeMap);
+  const schema = useEditorStore(s => s.schema);
+  const addChildNode = useEditorStore(s => s.addChildNode);
+  const addSiblingAfter = useEditorStore(s => s.addSiblingAfter);
+  const deleteNode = useEditorStore(s => s.deleteNode);
+  const moveNodeUp = useEditorStore(s => s.moveNodeUp);
+  const moveNodeDown = useEditorStore(s => s.moveNodeDown);
 
-  const [subMenu, setSubMenu] = useState<"child" | "sibling" | null>(null);
+  const [subMenu, setSubMenu] = useState<'child' | 'sibling' | null>(null);
   const [subMenuPos, setSubMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const node = nodeMap.get(position.nodeId);
@@ -63,15 +57,15 @@ export function ContextMenu({
       }
     }
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
     return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
     };
   }, [onClose]);
 
@@ -136,36 +130,29 @@ export function ContextMenu({
     onClose();
   };
 
-  const openSubMenu = useCallback(
-    (menu: "child" | "sibling", e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      setSubMenuPos({ x: rect.right, y: rect.top });
-      setSubMenu(menu);
-    },
-    [],
-  );
+  const openSubMenu = useCallback((menu: 'child' | 'sibling', e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSubMenuPos({ x: rect.right, y: rect.top });
+    setSubMenu(menu);
+  }, []);
 
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50"
-      style={{ left: position.x, top: position.y }}
-    >
+    <div ref={menuRef} className="fixed z-50" style={{ left: position.x, top: position.y }}>
       {/* Main menu */}
       <div className="min-w-[180px] py-1 bg-background border border-border rounded-md shadow-lg text-sm">
         {/* Insert Child */}
         {canInsertChild && (
           <div
             className="relative"
-            onMouseEnter={(e) => openSubMenu("child", e)}
-            onMouseLeave={() => subMenu === "child" && setSubMenu(null)}
+            onMouseEnter={e => openSubMenu('child', e)}
+            onMouseLeave={() => subMenu === 'child' && setSubMenu(null)}
           >
             <MenuItem
               icon={<Plus size={14} />}
               label="Insert Child"
               suffix={<ChevronRight size={12} className="text-muted-foreground" />}
             />
-            {subMenu === "child" && (
+            {subMenu === 'child' && (
               <SubMenu position={subMenuPos} kinds={validChildren} onSelect={handleInsertChild} />
             )}
           </div>
@@ -175,15 +162,15 @@ export function ContextMenu({
         {canInsertSibling && (
           <div
             className="relative"
-            onMouseEnter={(e) => openSubMenu("sibling", e)}
-            onMouseLeave={() => subMenu === "sibling" && setSubMenu(null)}
+            onMouseEnter={e => openSubMenu('sibling', e)}
+            onMouseLeave={() => subMenu === 'sibling' && setSubMenu(null)}
           >
             <MenuItem
               icon={<Plus size={14} />}
               label="Insert After"
               suffix={<ChevronRight size={12} className="text-muted-foreground" />}
             />
-            {subMenu === "sibling" && (
+            {subMenu === 'sibling' && (
               <SubMenu position={subMenuPos} kinds={validSiblings} onSelect={handleInsertSibling} />
             )}
           </div>
@@ -201,9 +188,7 @@ export function ContextMenu({
         )}
 
         {/* Delete */}
-        {canDelete && (
-          <MenuItem icon={<Trash2 size={14} />} label="Delete" onClick={handleDelete} destructive />
-        )}
+        {canDelete && <MenuItem icon={<Trash2 size={14} />} label="Delete" onClick={handleDelete} destructive />}
       </div>
     </div>
   );
@@ -226,7 +211,7 @@ function MenuItem({
   return (
     <div
       className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-accent ${
-        destructive ? "text-red-600 hover:text-red-700" : ""
+        destructive ? 'text-red-600 hover:text-red-700' : ''
       }`}
       onClick={onClick}
     >
@@ -257,7 +242,7 @@ function SubMenu({
       className="fixed z-[51] min-w-[140px] py-1 bg-background border border-border rounded-md shadow-lg text-sm"
       style={{ left: position.x, top: position.y }}
     >
-      {kinds.map((kind) => (
+      {kinds.map(kind => (
         <div
           key={kind}
           className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-accent"

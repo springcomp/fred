@@ -9,4 +9,15 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      include: ['src/model/**', 'src/store/**'],
+      exclude: ['src/model/samples.ts'],
+    },
+  },
 });

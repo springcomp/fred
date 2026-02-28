@@ -104,6 +104,12 @@ export function serializeXsd(schema: FFSchemaNode): string {
 
 // ─── Node Serialization ─────────────────────────────────────────────────────
 
+/** Ensure a data type has the xs: prefix exactly once. */
+function qualifyXsType(dataType: string): string {
+  const raw = escapeAttr(dataType);
+  return raw.includes(':') ? raw : `xs:${raw}`;
+}
+
 function serializeNode(node: FFNode, lines: string[], depth: number) {
   switch (node.kind) {
     case 'record':
@@ -175,7 +181,7 @@ function serializeRecord(node: FFRecordNode, lines: string[], depth: number) {
 function serializeElement(node: FFElementNode, lines: string[], depth: number) {
   const ind = '  '.repeat(depth);
   const occAttrs = occurrenceAttrs(node.minOccurs, node.maxOccurs);
-  const typeAttr = ` type="xs:${escapeAttr(node.dataType)}"`;
+  const typeAttr = ` type="${qualifyXsType(node.dataType)}"`;
   const fieldAttrs = serializeFieldInfoAttrs(node.fieldInfo);
 
   if (fieldAttrs) {
@@ -194,7 +200,7 @@ function serializeElement(node: FFElementNode, lines: string[], depth: number) {
 function serializeAttribute(node: FFAttributeNode, lines: string[], depth: number) {
   const ind = '  '.repeat(depth);
   const useAttr = node.use !== XmlSchemaUse.None ? ` use="${node.use}"` : '';
-  const typeAttr = ` type="xs:${escapeAttr(node.dataType)}"`;
+  const typeAttr = ` type="${qualifyXsType(node.dataType)}"`;
   const fieldAttrs = serializeFieldInfoAttrs(node.fieldInfo);
 
   if (fieldAttrs) {

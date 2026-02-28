@@ -46,6 +46,54 @@ const parserOptimizationOptions: Record<string, ParserOptimization> = {
   Complexity: ParserOptimization.Complexity,
 };
 
+/** XSD built-in simple types (xs: prefix is added during serialization). */
+const xsdBuiltInTypes: Record<string, string> = {
+  "xs:string": "xs:string",
+  "xs:boolean": "xs:boolean",
+  "xs:decimal": "xs:decimal",
+  "xs:float": "xs:float",
+  "xs:double": "xs:double",
+  "xs:integer": "xs:integer",
+  "xs:long": "xs:long",
+  "xs:int": "xs:int",
+  "xs:short": "xs:short",
+  "xs:byte": "xs:byte",
+  "xs:unsignedLong": "xs:unsignedLong",
+  "xs:unsignedInt": "xs:unsignedInt",
+  "xs:unsignedShort": "xs:unsignedShort",
+  "xs:unsignedByte": "xs:unsignedByte",
+  "xs:positiveInteger": "xs:positiveInteger",
+  "xs:negativeInteger": "xs:negativeInteger",
+  "xs:nonPositiveInteger": "xs:nonPositiveInteger",
+  "xs:nonNegativeInteger": "xs:nonNegativeInteger",
+  "xs:date": "xs:date",
+  "xs:dateTime": "xs:dateTime",
+  "xs:time": "xs:time",
+  "xs:duration": "xs:duration",
+  "xs:gYear": "xs:gYear",
+  "xs:gYearMonth": "xs:gYearMonth",
+  "xs:gMonth": "xs:gMonth",
+  "xs:gMonthDay": "xs:gMonthDay",
+  "xs:gDay": "xs:gDay",
+  "xs:hexBinary": "xs:hexBinary",
+  "xs:base64Binary": "xs:base64Binary",
+  "xs:anyURI": "xs:anyURI",
+  "xs:QName": "xs:QName",
+  "xs:NOTATION": "xs:NOTATION",
+  "xs:normalizedString": "xs:normalizedString",
+  "xs:token": "xs:token",
+  "xs:language": "xs:language",
+  "xs:Name": "xs:Name",
+  "xs:NCName": "xs:NCName",
+  "xs:ID": "xs:ID",
+  "xs:IDREF": "xs:IDREF",
+  "xs:IDREFS": "xs:IDREFS",
+  "xs:ENTITY": "xs:ENTITY",
+  "xs:ENTITIES": "xs:ENTITIES",
+  "xs:NMTOKEN": "xs:NMTOKEN",
+  "xs:NMTOKENS": "xs:NMTOKENS",
+};
+
 // ─── SchemaInfo Panel ───────────────────────────────────────────────────────
 
 interface SchemaInfoPanelProps {
@@ -206,15 +254,17 @@ interface FieldInfoPanelProps {
   dataType: string;
   isAttribute?: boolean;
   onChange: (property: string, value: unknown) => void;
+  onDirectChange: (property: string, value: unknown) => void;
   isDirty: (property: string) => boolean;
+  isDirectDirty: (property: string) => boolean;
 }
 
-export function FieldInfoPanel({ info, name, dataType, isAttribute, onChange, isDirty }: FieldInfoPanelProps) {
+export function FieldInfoPanel({ info, name, dataType, isAttribute, onChange, onDirectChange, isDirty, isDirectDirty }: FieldInfoPanelProps) {
   return (
     <div className="flex flex-col gap-0.5">
       <SectionHeader title={isAttribute ? "Attribute" : "Element"} />
       <TextField label="Name" value={name} readOnly onChange={() => {}} />
-      <TextField label="Data Type" value={dataType} readOnly onChange={() => {}} />
+      <EnumField label="Data Type" value={dataType} options={xsdBuiltInTypes} onChange={(v) => onDirectChange("dataType", v)} dirty={isDirectDirty("dataType")} />
       <EnumField label="Justification" value={info.justification} options={justificationOptions} onChange={(v) => onChange("justification", v)} dirty={isDirty("justification")} />
       <TextField label="DateTime Format" value={info.dateTimeFormat} onChange={(v) => onChange("dateTimeFormat", v)} placeholder=".NET format string" dirty={isDirty("dateTimeFormat")} />
 

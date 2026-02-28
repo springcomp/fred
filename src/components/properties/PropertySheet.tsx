@@ -85,7 +85,9 @@ export function PropertySheet() {
           name={node.name}
           dataType={node.dataType}
           onChange={makeOnChange("fieldInfo")}
+          onDirectChange={onDirectChange}
           isDirty={makeIsDirty("fieldInfo")}
+          isDirectDirty={isDirectDirty}
         />
       )}
 
@@ -96,7 +98,9 @@ export function PropertySheet() {
           dataType={node.dataType}
           isAttribute
           onChange={makeOnChange("fieldInfo")}
+          onDirectChange={onDirectChange}
           isDirty={makeIsDirty("fieldInfo")}
+          isDirectDirty={isDirectDirty}
         />
       )}
 

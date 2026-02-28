@@ -5,8 +5,8 @@ import { NodeIcon, nodeKindLabel } from "./NodeIcon";
 import { getNodeLabel, type FFNode } from "@/model/types";
 import { Badge } from "@/components/ui/Badge";
 
-/** Node kinds that have a user-editable name. */
-const RENAMABLE_KINDS = new Set<FFNode["kind"]>(["record", "element", "attribute"]);
+/** Node kinds that support inline editing on double-click. */
+const EDITABLE_KINDS = new Set<FFNode["kind"]>(["schema", "record", "element", "attribute"]);
 
 function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
   const data = node.data;
@@ -21,19 +21,20 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canRename = RENAMABLE_KINDS.has(data.kind);
+  const canEdit = EDITABLE_KINDS.has(data.kind);
 
   const commitRename = useCallback(() => {
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== getNodeLabel(data)) {
-      updateNodeDirect(data.id, "name", trimmed);
+      const prop = data.kind === "schema" ? "targetNamespace" : "name";
+      updateNodeDirect(data.id, prop, trimmed);
     }
     setEditing(false);
   }, [editValue, data, updateNodeDirect]);
 
   const cancelRename = useCallback(() => {
     setEditing(false);
-  }, []);
+  });
 
   // Auto-focus and select all text when entering edit mode
   useEffect(() => {
@@ -45,7 +46,7 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (canRename) {
+    if (canEdit) {
       setEditValue(getNodeLabel(data));
       setEditing(true);
     } else if (data.kind === "sequence" || data.kind === "choice") {

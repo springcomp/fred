@@ -14,7 +14,7 @@ const INFO_KEYS: Record<string, string> = {
 
 /** Direct (top-level) node properties we also track for dirty comparison. */
 const DIRECT_PROPS: Record<string, string[]> = {
-  schema: ['elementFormDefault'],
+  schema: ['targetNamespace', 'elementFormDefault'],
   record: ['name', 'minOccurs', 'maxOccurs'],
   element: ['name', 'dataType'],
   attribute: ['name', 'dataType'],

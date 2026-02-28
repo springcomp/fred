@@ -60,8 +60,10 @@ function assignSequenceNumbers(root: FFSchemaNode) {
 
 /** Serialize an FFSchemaNode tree to XSD XML string. */
 export function serializeXsd(schema: FFSchemaNode): string {
+  // Clone before mutating — the store schema may be frozen by Immer
+  const clone = structuredClone(schema);
   // Auto-assign sequence numbers depth-first before serializing
-  assignSequenceNumbers(schema);
+  assignSequenceNumbers(clone);
 
   const lines: string[] = [];
   const indent = (depth: number) => '  '.repeat(depth);
@@ -70,11 +72,11 @@ export function serializeXsd(schema: FFSchemaNode): string {
 
   // Schema element
   const nsAttrs = [
-    schema.targetNamespace ? `xmlns="${escapeAttr(schema.targetNamespace)}"` : '',
+    clone.targetNamespace ? `xmlns="${escapeAttr(clone.targetNamespace)}"` : '',
     `xmlns:b="${BTS_NS}"`,
     `xmlns:xs="${XS_NS}"`,
-    schema.targetNamespace ? `targetNamespace="${escapeAttr(schema.targetNamespace)}"` : '',
-    `elementFormDefault="${escapeAttr(schema.elementFormDefault)}"`,
+    clone.targetNamespace ? `targetNamespace="${escapeAttr(clone.targetNamespace)}"` : '',
+    `elementFormDefault="${escapeAttr(clone.elementFormDefault)}"`,
   ]
     .filter(Boolean)
     .join('\n    ');
@@ -82,7 +84,7 @@ export function serializeXsd(schema: FFSchemaNode): string {
   lines.push(`<xs:schema ${nsAttrs}>`);
 
   // Schema-level annotation
-  const schemaInfoAttrs = serializeSchemaInfoAttrs(schema.schemaInfo);
+  const schemaInfoAttrs = serializeSchemaInfoAttrs(clone.schemaInfo);
   if (schemaInfoAttrs) {
     lines.push(`${indent(1)}<xs:annotation>`);
     lines.push(`${indent(2)}<xs:appinfo>`);
@@ -92,7 +94,7 @@ export function serializeXsd(schema: FFSchemaNode): string {
   }
 
   // Children (root elements)
-  for (const child of schema.children) {
+  for (const child of clone.children) {
     serializeNode(child, lines, 1);
   }
 

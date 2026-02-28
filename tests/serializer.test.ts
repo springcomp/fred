@@ -410,13 +410,19 @@ describe('serializeXsd – sequence number assignment', () => {
     const rec = makeRecord('R', [seq]);
     const schema = makeSchema([rec]);
 
-    serializeXsd(schema);
+    const xml = serializeXsd(schema);
 
-    // After serialization, the sequence numbers should have been assigned
-    expect(rec.recordInfo.sequenceNumber).toBe(1);
-    expect(seq.groupInfo.sequenceNumber).toBe(2);
-    expect(e1.fieldInfo.sequenceNumber).toBe(3);
-    expect(e2.fieldInfo.sequenceNumber).toBe(4);
+    // The original nodes should NOT be mutated (serializeXsd works on a clone)
+    expect(rec.recordInfo.sequenceNumber).toBe(0);
+    expect(seq.groupInfo.sequenceNumber).toBe(0);
+    expect(e1.fieldInfo.sequenceNumber).toBe(0);
+    expect(e2.fieldInfo.sequenceNumber).toBe(0);
+
+    // But the serialized XML should contain the correct sequence numbers
+    expect(xml).toContain('sequence_number="1"');
+    expect(xml).toContain('sequence_number="2"');
+    expect(xml).toContain('sequence_number="3"');
+    expect(xml).toContain('sequence_number="4"');
   });
 });
 

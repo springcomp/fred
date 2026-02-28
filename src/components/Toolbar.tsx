@@ -48,7 +48,7 @@ function loadFromText(text: string, handle?: FileSystemFileHandle) {
 
 /** Open via modern File System Access API (Chromium). */
 async function openFileNative() {
-  const [handle] = await window.showOpenFilePicker!({
+  const [handle] = await window.showOpenFilePicker?.({
     types: [{ description: 'XSD Schema files', accept: { 'application/xml': ['.xsd', '.xml'] } }],
   });
   const file = await handle.getFile();
@@ -116,7 +116,7 @@ async function saveFileAs() {
 
   try {
     if (supportsFilePicker) {
-      const handle = await window.showSaveFilePicker!({
+      const handle = await window.showSaveFilePicker?.({
         suggestedName: 'schema.xsd',
         types: [{ description: 'XSD Schema files', accept: { 'application/xml': ['.xsd'] } }],
       });

@@ -2,6 +2,8 @@
 
 > **100% AI-generated code** — Every line of code in this project was produced by a GitHub Copilot agent (Claude Opus 4.6), steered by human prompts. No code was written by a human developer.
 
+**Note** To help kick start the project, POCO classes that model the business domain (BizTalk Server Flat File Schema main structures and annotations) were fed to the agent as C# source files taken from a private project.
+
 ## Project Overview
 
 This project is a web-based XSD flat-file schema editor built with React, Vite, TypeScript, Zustand, and Tailwind CSS. It was developed entirely through conversational AI pair-programming across 11 active chat sessions and 69 prompts over approximately 20 hours.

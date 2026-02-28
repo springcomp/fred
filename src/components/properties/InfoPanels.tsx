@@ -6,6 +6,7 @@ import {
   NumberField,
   EnumField,
   CharacterPairField,
+  MaxOccursField,
   SectionHeader,
 } from "./PropertyFields";
 
@@ -203,12 +204,19 @@ interface RecordInfoPanelProps {
 }
 
 export function RecordInfoPanel({ info, name, minOccurs, maxOccurs, onChange, onDirectChange, isDirty, isDirectDirty }: RecordInfoPanelProps) {
+  const UNBOUNDED = Number.MAX_SAFE_INTEGER;
+  const handleMinOccursChange = (v: number) => {
+    onDirectChange("minOccurs", v);
+    if (maxOccurs !== UNBOUNDED && v > maxOccurs) {
+      onDirectChange("maxOccurs", v);
+    }
+  };
   return (
     <div className="flex flex-col gap-0.5">
       <SectionHeader title="Record" />
       <TextField label="Name" value={name} readOnly onChange={() => {}} />
-      <NumberField label="Min Occurs" value={minOccurs} min={0} onChange={(v) => onDirectChange("minOccurs", v)} dirty={isDirectDirty("minOccurs")} />
-      <NumberField label="Max Occurs" value={maxOccurs} min={0} onChange={(v) => onDirectChange("maxOccurs", v)} dirty={isDirectDirty("maxOccurs")} />
+      <NumberField label="Min Occurs" value={minOccurs} min={0} onChange={handleMinOccursChange} dirty={isDirectDirty("minOccurs")} />
+      <MaxOccursField label="Max Occurs" value={maxOccurs} minOccurs={minOccurs} onChange={(v) => onDirectChange("maxOccurs", v)} dirty={isDirectDirty("maxOccurs")} />
       <EnumField label="Structure" value={info.structure} options={structureTypeOptions} onChange={(v) => onChange("structure", v)} dirty={isDirty("structure")} />
 
       <SectionHeader title="Delimiters" />
@@ -326,12 +334,19 @@ interface GroupInfoPanelProps {
 }
 
 export function GroupInfoPanel({ info, kind, minOccurs, maxOccurs, onChange, onDirectChange, isDirty, isDirectDirty }: GroupInfoPanelProps) {
+  const UNBOUNDED = Number.MAX_SAFE_INTEGER;
+  const handleMinOccursChange = (v: number) => {
+    onDirectChange("minOccurs", v);
+    if (maxOccurs !== UNBOUNDED && v > maxOccurs) {
+      onDirectChange("maxOccurs", v);
+    }
+  };
   return (
     <div className="flex flex-col gap-0.5">
       <SectionHeader title="Group" />
       <EnumField label="Type" value={kind} options={groupKindOptions} onChange={(v) => onDirectChange("kind", v)} dirty={isDirectDirty("kind")} />
-      <NumberField label="Min Occurs" value={minOccurs} min={0} onChange={(v) => onDirectChange("minOccurs", v)} dirty={isDirectDirty("minOccurs")} />
-      <NumberField label="Max Occurs" value={maxOccurs} min={0} onChange={(v) => onDirectChange("maxOccurs", v)} dirty={isDirectDirty("maxOccurs")} />
+      <NumberField label="Min Occurs" value={minOccurs} min={0} onChange={handleMinOccursChange} dirty={isDirectDirty("minOccurs")} />
+      <MaxOccursField label="Max Occurs" value={maxOccurs} minOccurs={minOccurs} onChange={(v) => onDirectChange("maxOccurs", v)} dirty={isDirectDirty("maxOccurs")} />
     </div>
   );
 }

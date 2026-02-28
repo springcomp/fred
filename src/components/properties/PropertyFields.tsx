@@ -153,3 +153,52 @@ export function CharacterPairField({
 export function SectionHeader({ title }: { title: string }) {
   return <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-3 pb-1 border-b border-border">{title}</h3>;
 }
+
+// ─── MaxOccurs Field ────────────────────────────────────────────────────────
+
+const UNBOUNDED = Number.MAX_SAFE_INTEGER;
+
+interface MaxOccursFieldProps {
+  label: string;
+  value: number;
+  minOccurs: number;
+  onChange: (v: number) => void;
+  dirty?: boolean;
+}
+
+/**
+ * A specialised field for maxOccurs.
+ * Displays `minOccurs - 1` for unbounded so the native spinner
+ * naturally cycles: minOccurs ↔ unbounded.
+ */
+export function MaxOccursField({ label, value, minOccurs, onChange, dirty }: MaxOccursFieldProps) {
+  const isUnbounded = value === UNBOUNDED;
+  const unboundedDisplay = minOccurs - 1;
+  const displayValue = isUnbounded ? unboundedDisplay : value;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.trim();
+    if (raw === "") {
+      return;
+    }
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isNaN(n)) {
+      onChange(n < minOccurs ? UNBOUNDED : n);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1 py-1">
+      <div className="flex items-center gap-2">
+        <Label className={dirty ? "font-bold" : ""}>{label}</Label>
+        {isUnbounded && <span className="text-xs text-muted-foreground italic">unbounded</span>}
+      </div>
+      <Input
+        type="number"
+        value={displayValue}
+        min={unboundedDisplay}
+        onChange={handleChange}
+      />
+    </div>
+  );
+}

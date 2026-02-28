@@ -281,7 +281,9 @@ function createMinOccursHandler(
 
 ---
 
-## 2. Performance: `structuredClone` on Every Keystroke
+## 2. Performance: `structuredClone` on Every Keystroke ✅
+
+> **Resolved** — Replaced `structuredClone` with Immer `produce()` in all 7 store actions for surgical immutable updates with structural sharing.
 
 **File**: `editorStore.ts`, line 158 (and 6 other store actions).
 

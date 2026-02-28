@@ -1,3 +1,4 @@
+import { produce } from 'immer';
 import { create } from 'zustand';
 import type { FFNode, FFSchemaNode, InsertableKind } from '@/model/types';
 import { buildNodeMap, createNewNode, findParent, getInsertableKinds } from '@/model/types';
@@ -87,6 +88,20 @@ function applyDirtyTracking(
     dirtyNodeIds.add(p.split('|')[0]);
   }
   return { dirtyPaths, dirtyNodeIds, dirty: dirtyPaths.size > 0 };
+}
+
+/** Walk the tree and return the first node with the given id (used inside Immer drafts). */
+function findNode(root: FFNode, nodeId: string): FFNode | null {
+  if (root.id === nodeId) {
+    return root;
+  }
+  for (const child of root.children) {
+    const found = findNode(child, nodeId);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
 }
 
 export interface EditorState {
@@ -191,55 +206,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updateNodeProperty: (nodeId, infoKey, property, value) => {
-    const { schema } = get();
-    if (!schema) {
+    const { schema, nodeMap } = get();
+    if (!schema || !nodeMap.has(nodeId)) {
       return;
     }
 
-    // Deep-clone the entire tree so every node gets a new reference.
-    // This ensures Zustand selectors detect changes and React re-renders.
-    const newSchema = structuredClone(schema);
-    const newMap = buildNodeMap(newSchema);
-
-    const node = newMap.get(nodeId);
-    if (!node) {
-      return;
-    }
-
-    const info = getNodeInfo(node, infoKey);
-    if (info) {
-      info[property] = value;
-    }
+    const newSchema = produce(schema, draft => {
+      const node = findNode(draft, nodeId);
+      if (node) {
+        const info = getNodeInfo(node, infoKey);
+        if (info) {
+          info[property] = value;
+        }
+      }
+    });
 
     const pathKey = `${nodeId}|${infoKey}|${property}`;
     const tracking = applyDirtyTracking(pathKey, value, get);
+    const newMap = buildNodeMap(newSchema);
 
     set({ schema: newSchema, nodeMap: newMap, ...tracking });
   },
 
   updateNodeDirect: (nodeId, property, value) => {
-    const { schema } = get();
-    if (!schema) {
+    const { schema, nodeMap } = get();
+    if (!schema || !nodeMap.has(nodeId)) {
       return;
     }
 
-    const newSchema = structuredClone(schema);
-    const newMap = buildNodeMap(newSchema);
+    const newSchema = produce(schema, draft => {
+      const node = findNode(draft, nodeId);
+      if (node) {
+        (node as unknown as Record<string, unknown>)[property] = value;
 
-    const node = newMap.get(nodeId);
-    if (!node) {
-      return;
-    }
-
-    (node as unknown as Record<string, unknown>)[property] = value;
-
-    // When the root record is renamed, keep schemaInfo.rootReference in sync
-    if (property === 'name' && node.kind === 'record' && newSchema.children[0]?.id === nodeId) {
-      newSchema.schemaInfo.rootReference = value as string;
-    }
+        // When the root record is renamed, keep schemaInfo.rootReference in sync
+        if (property === 'name' && node.kind === 'record' && draft.children[0]?.id === nodeId) {
+          draft.schemaInfo.rootReference = value as string;
+        }
+      }
+    });
 
     const pathKey = `${nodeId}|.|${property}`;
     const tracking = applyDirtyTracking(pathKey, value, get);
+    const newMap = buildNodeMap(newSchema);
 
     set({ schema: newSchema, nodeMap: newMap, ...tracking });
   },
@@ -273,34 +282,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const newSchema = structuredClone(schema);
-    const newMap = buildNodeMap(newSchema);
-    const parentNode = newMap.get(parentId);
-    if (!parentNode) {
-      return;
-    }
-
-    const newNode = createNewNode(kind, newMap);
-
-    // Record children redirect: elements and records go into the immediate group.
-    // Attributes are inserted before the group; the group is always the last child.
-    if (parentNode.kind === 'record' && (kind === 'element' || kind === 'record')) {
-      const group = parentNode.children.find(c => c.kind === 'sequence' || c.kind === 'choice');
+    // For record parents accepting elements/records, verify the group exists
+    if (parent.kind === 'record' && (kind === 'element' || kind === 'record')) {
+      const group = parent.children.find(c => c.kind === 'sequence' || c.kind === 'choice');
       if (!group) {
         return; // no group to insert into
       }
-      group.children.push(newNode);
-    } else if (parentNode.kind === 'record' && kind === 'attribute') {
-      // Insert attribute before the group (keep attributes at the start)
-      const groupIdx = parentNode.children.findIndex(c => c.kind === 'sequence' || c.kind === 'choice');
-      if (groupIdx >= 0) {
-        parentNode.children.splice(groupIdx, 0, newNode);
+    }
+
+    const newNode = createNewNode(kind, nodeMap);
+
+    const newSchema = produce(schema, draft => {
+      const parentNode = findNode(draft, parentId);
+      if (!parentNode) {
+        return;
+      }
+
+      // Record children redirect: elements and records go into the immediate group.
+      // Attributes are inserted before the group; the group is always the last child.
+      if (parentNode.kind === 'record' && (kind === 'element' || kind === 'record')) {
+        const group = parentNode.children.find(c => c.kind === 'sequence' || c.kind === 'choice');
+        if (!group) {
+          return;
+        }
+        group.children.push(newNode);
+      } else if (parentNode.kind === 'record' && kind === 'attribute') {
+        // Insert attribute before the group (keep attributes at the start)
+        const groupIdx = parentNode.children.findIndex(c => c.kind === 'sequence' || c.kind === 'choice');
+        if (groupIdx >= 0) {
+          parentNode.children.splice(groupIdx, 0, newNode);
+        } else {
+          parentNode.children.push(newNode);
+        }
       } else {
         parentNode.children.push(newNode);
       }
-    } else {
-      parentNode.children.push(newNode);
-    }
+    });
 
     // Rebuild map to include the new node
     const finalMap = buildNodeMap(newSchema);
@@ -315,33 +332,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   addSiblingAfter: (siblingId, kind) => {
-    const { schema } = get();
+    const { schema, nodeMap } = get();
     if (!schema) {
       return;
     }
 
-    // Find parent of sibling
+    // Find parent of sibling and validate
     const parentEntry = findParent(schema, siblingId);
     if (!parentEntry) {
       return;
     }
-    const { parent } = parentEntry;
-    if (!getInsertableKinds(parent).includes(kind)) {
+    if (!getInsertableKinds(parentEntry.parent).includes(kind)) {
       return;
     }
 
-    const newSchema = structuredClone(schema);
-    const newMap = buildNodeMap(newSchema);
+    const newNode = createNewNode(kind, nodeMap);
 
-    // Find cloned parent and sibling index
-    const clonedParent = findParent(newSchema, siblingId);
-    if (!clonedParent) {
-      return;
-    }
-    const { parent: pNode, index: sibIdx } = clonedParent;
-
-    const newNode = createNewNode(kind, newMap);
-    pNode.children.splice(sibIdx + 1, 0, newNode);
+    const newSchema = produce(schema, draft => {
+      const clonedParent = findParent(draft, siblingId);
+      if (!clonedParent) {
+        return;
+      }
+      const { parent: pNode, index: sibIdx } = clonedParent;
+      pNode.children.splice(sibIdx + 1, 0, newNode);
+    });
 
     const finalMap = buildNodeMap(newSchema);
     const needsRename = kind === 'record' || kind === 'element' || kind === 'attribute';
@@ -364,21 +378,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const newSchema = structuredClone(schema);
-    const parentEntry = findParent(newSchema, nodeId);
+    // Validate on original tree and capture parent id for selection
+    const parentEntry = findParent(schema, nodeId);
     if (!parentEntry) {
       return;
     }
+    const parentId = parentEntry.parent.id;
 
-    const { parent, index } = parentEntry;
-    parent.children.splice(index, 1);
+    const newSchema = produce(schema, draft => {
+      const entry = findParent(draft, nodeId);
+      if (!entry) {
+        return;
+      }
+      entry.parent.children.splice(entry.index, 1);
+    });
 
     const finalMap = buildNodeMap(newSchema);
     // Select the parent after deletion
     set({
       schema: newSchema,
       nodeMap: finalMap,
-      selectedNodeId: parent.id,
+      selectedNodeId: parentId,
       dirty: true,
     });
   },
@@ -389,15 +409,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const newSchema = structuredClone(schema);
-    const parentEntry = findParent(newSchema, nodeId);
-    if (!parentEntry || parentEntry.index === 0) {
+    // Validate on original tree
+    const check = findParent(schema, nodeId);
+    if (!check || check.index === 0) {
       return;
     }
 
-    const { parent, index } = parentEntry;
-    const [removed] = parent.children.splice(index, 1);
-    parent.children.splice(index - 1, 0, removed);
+    const newSchema = produce(schema, draft => {
+      const parentEntry = findParent(draft, nodeId);
+      if (!parentEntry) {
+        return;
+      }
+      const { parent, index } = parentEntry;
+      const [removed] = parent.children.splice(index, 1);
+      parent.children.splice(index - 1, 0, removed);
+    });
 
     const finalMap = buildNodeMap(newSchema);
     set({ schema: newSchema, nodeMap: finalMap, dirty: true });
@@ -409,19 +435,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const newSchema = structuredClone(schema);
-    const parentEntry = findParent(newSchema, nodeId);
-    if (!parentEntry) {
+    // Validate on original tree
+    const check = findParent(schema, nodeId);
+    if (!check || check.index >= check.parent.children.length - 1) {
       return;
     }
 
-    const { parent, index } = parentEntry;
-    if (index >= parent.children.length - 1) {
-      return;
-    }
-
-    const [removed] = parent.children.splice(index, 1);
-    parent.children.splice(index + 1, 0, removed);
+    const newSchema = produce(schema, draft => {
+      const parentEntry = findParent(draft, nodeId);
+      if (!parentEntry) {
+        return;
+      }
+      const { parent, index } = parentEntry;
+      const [removed] = parent.children.splice(index, 1);
+      parent.children.splice(index + 1, 0, removed);
+    });
 
     const finalMap = buildNodeMap(newSchema);
     set({ schema: newSchema, nodeMap: finalMap, dirty: true });

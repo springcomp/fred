@@ -33,6 +33,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "immer": "^11.1.4",
     "lucide-react": "^0.575.0",
     "react": "^19.2.4",
     "react-arborist": "^3.4.3",

@@ -2,8 +2,26 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { Tree, type NodeRendererProps } from "react-arborist";
 import { useEditorStore } from "@/store/editorStore";
 import { NodeIcon, nodeKindLabel } from "./NodeIcon";
-import { getNodeLabel, type FFNode } from "@/model/types";
+import { getNodeLabel, type FFNode, type FFOccurrenceNode } from "@/model/types";
 import { Badge } from "@/components/ui/Badge";
+
+/** Node kinds that have minOccurs / maxOccurs. */
+const OCCURRENCE_KINDS = new Set<FFNode["kind"]>(["record", "element", "sequence", "choice"]);
+
+const UNBOUNDED = Number.MAX_SAFE_INTEGER;
+
+/** Format an occurrence hint like "0 … *". Returns null for the default 1…1. */
+function occurrenceHint(node: FFNode): string | null {
+  if (!OCCURRENCE_KINDS.has(node.kind)) {
+    return null;
+  }
+  const { minOccurs, maxOccurs } = node as FFOccurrenceNode;
+  if (minOccurs === 1 && maxOccurs === 1) {
+    return null;
+  }
+  const max = maxOccurs === UNBOUNDED ? "*" : String(maxOccurs);
+  return `${minOccurs} \u2026 ${max}`;
+}
 
 /** Node kinds that support inline editing on double-click. */
 const EDITABLE_KINDS = new Set<FFNode["kind"]>(["schema", "record", "element", "attribute"]);
@@ -101,6 +119,10 @@ function Node({ node, style, dragHandle }: NodeRendererProps<FFNode>) {
           {getNodeLabel(data)}
         </span>
       )}
+      {(() => {
+        const hint = occurrenceHint(data);
+        return hint ? <span className="shrink-0 text-xs font-bold italic text-muted-foreground">{hint}</span> : null;
+      })()}
       <Badge variant="outline" className="ml-auto shrink-0">
         {nodeKindLabel(data.kind)}
       </Badge>

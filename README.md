@@ -4,6 +4,8 @@ FRED sends good vibes!
 
 FRED is an editor for BizTalk Flat File XSD schemas.
 
+![](./assets/screenshot.png)
+
 ## Running the app
 
 ```sh

@@ -181,7 +181,7 @@ function parseRecord(
       groupInfo,
       children: [],
     };
-    parseSequenceChildren(seq, seqNode, schemaInfo);
+    parseGroupChildren(seq, seqNode, schemaInfo);
     node.children.push(seqNode);
   }
 
@@ -196,7 +196,7 @@ function parseRecord(
       groupInfo,
       children: [],
     };
-    parseChoiceChildren(choice, choiceNode, schemaInfo);
+    parseGroupChildren(choice, choiceNode, schemaInfo);
     node.children.push(choiceNode);
   }
 
@@ -232,10 +232,12 @@ function parseAttribute(el: Element, schemaInfo: SchemaInfo): FFAttributeNode | 
   };
 }
 
-function parseSequenceChildren(seqEl: Element, parent: FFRecordNode | FFSequenceNode, schemaInfo: SchemaInfo) {
-  // If the sequence itself has groupInfo, wrap it as a sequence node
-  // Otherwise, parse children directly into parent
-  for (const child of xsChildren(seqEl)) {
+function parseGroupChildren(
+  groupEl: Element,
+  parent: FFRecordNode | FFSequenceNode | FFChoiceNode,
+  schemaInfo: SchemaInfo,
+) {
+  for (const child of xsChildren(groupEl)) {
     if (child.localName === 'element' && child.namespaceURI === XS) {
       const parsed = parseElement(child, schemaInfo);
       if (parsed) {
@@ -251,7 +253,7 @@ function parseSequenceChildren(seqEl: Element, parent: FFRecordNode | FFSequence
         groupInfo,
         children: [],
       };
-      parseSequenceChildren(child, seqNode, schemaInfo);
+      parseGroupChildren(child, seqNode, schemaInfo);
       parent.children.push(seqNode);
     } else if (child.localName === 'choice' && child.namespaceURI === XS) {
       const groupInfo = parseGroupInfo(child) ?? createDefaultGroupInfo();
@@ -263,42 +265,7 @@ function parseSequenceChildren(seqEl: Element, parent: FFRecordNode | FFSequence
         groupInfo,
         children: [],
       };
-      parseChoiceChildren(child, choiceNode, schemaInfo);
-      parent.children.push(choiceNode);
-    }
-  }
-}
-
-function parseChoiceChildren(choiceEl: Element, parent: FFRecordNode | FFChoiceNode, schemaInfo: SchemaInfo) {
-  for (const child of xsChildren(choiceEl)) {
-    if (child.localName === 'element' && child.namespaceURI === XS) {
-      const parsed = parseElement(child, schemaInfo);
-      if (parsed) {
-        parent.children.push(parsed);
-      }
-    } else if (child.localName === 'sequence' && child.namespaceURI === XS) {
-      const groupInfo = parseGroupInfo(child) ?? createDefaultGroupInfo();
-      const seqNode: FFSequenceNode = {
-        id: uid(),
-        kind: 'sequence',
-        minOccurs: intAttr(child, 'minOccurs', 1),
-        maxOccurs: maxOccursAttr(child),
-        groupInfo,
-        children: [],
-      };
-      parseSequenceChildren(child, seqNode, schemaInfo);
-      parent.children.push(seqNode);
-    } else if (child.localName === 'choice' && child.namespaceURI === XS) {
-      const groupInfo = parseGroupInfo(child) ?? createDefaultGroupInfo();
-      const choiceNode: FFChoiceNode = {
-        id: uid(),
-        kind: 'choice',
-        minOccurs: intAttr(child, 'minOccurs', 1),
-        maxOccurs: maxOccursAttr(child),
-        groupInfo,
-        children: [],
-      };
-      parseChoiceChildren(child, choiceNode, schemaInfo);
+      parseGroupChildren(child, choiceNode, schemaInfo);
       parent.children.push(choiceNode);
     }
   }

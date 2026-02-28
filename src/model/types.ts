@@ -268,13 +268,24 @@ export function createDefaultGroupInfo(): GroupInfo {
   return { sequenceNumber: 0 };
 }
 
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+/** Sentinel value representing an unbounded maxOccurs. */
+export const UNBOUNDED = Number.MAX_SAFE_INTEGER;
+
 // ─── Node Creation ──────────────────────────────────────────────────────────
 
-let _nextId = 1000;
+let _nextEditorId = 1;
 
-/** Generate a unique node id. Starts at 1000 to avoid collisions with parser-generated ids. */
+/** Reset the editor id counter (useful for tests). */
+export function resetEditorIds() {
+  _nextEditorId = 1;
+}
+
+/** Generate a unique node id for editor-created nodes.
+ *  Uses an 'e' prefix to avoid collisions with parser-generated 'n' ids. */
 export function generateNodeId(): string {
-  return `n${_nextId++}`;
+  return `e${_nextEditorId++}`;
 }
 
 /** The insertable node kinds (not schema, not attribute). */
@@ -436,4 +447,21 @@ export function buildNodeMap(root: FFNode): Map<string, FFNode> {
   }
   walk(root);
   return map;
+}
+
+/** Walk the tree and return the parent node + index of the child with the given id. */
+export function findParent(root: FFNode, childId: string): { parent: FFNode; index: number } | null {
+  function walk(node: FFNode): { parent: FFNode; index: number } | null {
+    for (let i = 0; i < node.children.length; i++) {
+      if (node.children[i].id === childId) {
+        return { parent: node, index: i };
+      }
+      const found = walk(node.children[i]);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+  return walk(root);
 }

@@ -1,56 +1,34 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  AtSign,
-  ChevronDown,
-  Diamond,
-  FilePlus,
-  FolderOpen,
-  GitBranch,
-  ListOrdered,
-  Plus,
-  Save,
-  Trash2,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, FilePlus, FolderOpen, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { nodeKindLabel } from '@/components/tree/NodeIcon';
+import { insertKindIcon, insertKindLabel } from '@/components/tree/NodeIcon';
 import { parseXsd } from '@/model/parser';
-import { downloadAsFile, serializeXsd } from '@/model/serializer';
-import { type FFNode, getInsertableKinds, type InsertableKind } from '@/model/types';
+import { serializeXsd } from '@/model/serializer';
+import { type FFNode, getInsertableKinds } from '@/model/types';
 import { useEditorStore } from '@/store/editorStore';
-
-declare global {
-  interface Window {
-    showOpenFilePicker?: (options?: OpenFilePickerOptions) => Promise<FileSystemFileHandle[]>;
-    showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
-  }
-  interface OpenFilePickerOptions {
-    types?: FilePickerAcceptType[];
-    multiple?: boolean;
-  }
-  interface SaveFilePickerOptions {
-    suggestedName?: string;
-    types?: FilePickerAcceptType[];
-  }
-  interface FilePickerAcceptType {
-    description?: string;
-    accept: Record<string, string[]>;
-  }
-}
+import { downloadAsFile } from '@/utils/download';
 
 const supportsFilePicker = typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
 
 /** Read an XSD file from text and load it into the store. */
 function loadFromText(text: string, handle?: FileSystemFileHandle) {
-  const schema = parseXsd(text);
-  useEditorStore.getState().loadSchema(schema, handle);
+  try {
+    const schema = parseXsd(text);
+    useEditorStore.getState().loadSchema(schema, handle);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unknown error';
+    alert(`Failed to parse XSD file: ${message}`);
+  }
 }
 
 /** Open via modern File System Access API (Chromium). */
 async function openFileNative() {
-  const [handle] = await window.showOpenFilePicker?.({
+  const handles = await window.showOpenFilePicker?.({
     types: [{ description: 'XSD Schema files', accept: { 'application/xml': ['.xsd', '.xml'] } }],
   });
+  if (!handles) {
+    return;
+  }
+  const handle = handles[0];
   const file = await handle.getFile();
   const text = await file.text();
   loadFromText(text, handle);
@@ -120,6 +98,9 @@ async function saveFileAs() {
         suggestedName: 'schema.xsd',
         types: [{ description: 'XSD Schema files', accept: { 'application/xml': ['.xsd'] } }],
       });
+      if (!handle) {
+        return;
+      }
       const writable = await handle.createWritable();
       await writable.write(xsd);
       await writable.close();
@@ -232,18 +213,6 @@ function ToolbarButton({
 
 function ToolbarSeparator() {
   return <div className="w-px h-5 mx-1 bg-border" />;
-}
-
-const insertKindIcon: Record<InsertableKind, React.ReactNode> = {
-  record: <FolderOpen size={14} className="text-node-record" />,
-  element: <Diamond size={14} className="text-node-element" />,
-  sequence: <ListOrdered size={14} className="text-node-sequence" />,
-  choice: <GitBranch size={14} className="text-node-choice" />,
-  attribute: <AtSign size={14} className="text-node-attribute" />,
-};
-
-function insertKindLabel(kind: InsertableKind): string {
-  return kind === 'element' ? 'Field' : nodeKindLabel(kind);
 }
 
 /** Dropdown button for inserting child nodes. */

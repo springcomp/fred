@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { FFNode, FFSchemaNode, InsertableKind } from '@/model/types';
-import { buildNodeMap, createNewNode, getInsertableKinds } from '@/model/types';
+import { buildNodeMap, createNewNode, findParent, getInsertableKinds } from '@/model/types';
 
 /** The info keys we snapshot for dirty-tracking. */
 const INFO_KEYS: Record<string, string> = {
@@ -30,9 +30,9 @@ function buildOriginalValues(nodeMap: Map<string, FFNode>): Map<string, unknown>
     // Snapshot annotation sub-objects
     const infoKey = INFO_KEYS[node.kind];
     if (infoKey) {
-      const info = (node as unknown as Record<string, unknown>)[infoKey];
-      if (info && typeof info === 'object') {
-        for (const [prop, val] of Object.entries(info as Record<string, unknown>)) {
+      const info = getNodeInfo(node, infoKey);
+      if (info) {
+        for (const [prop, val] of Object.entries(info)) {
           map.set(`${nodeId}|${infoKey}|${prop}`, val);
         }
       }
@@ -41,11 +41,52 @@ function buildOriginalValues(nodeMap: Map<string, FFNode>): Map<string, unknown>
     const directProps = DIRECT_PROPS[node.kind];
     if (directProps) {
       for (const prop of directProps) {
-        map.set(`${nodeId}|.|${prop}`, (node as unknown as Record<string, unknown>)[prop]);
+        map.set(`${nodeId}|.|${prop}`, getNodeDirect(node, prop));
       }
     }
   }
   return map;
+}
+
+/** Type-safe accessor for a node's annotation info sub-object. */
+function getNodeInfo(node: FFNode, infoKey: string): Record<string, unknown> | null {
+  switch (node.kind) {
+    case 'schema':
+      return infoKey === 'schemaInfo' ? (node.schemaInfo as unknown as Record<string, unknown>) : null;
+    case 'record':
+      return infoKey === 'recordInfo' ? (node.recordInfo as unknown as Record<string, unknown>) : null;
+    case 'element':
+    case 'attribute':
+      return infoKey === 'fieldInfo' ? (node.fieldInfo as unknown as Record<string, unknown>) : null;
+    case 'sequence':
+    case 'choice':
+      return infoKey === 'groupInfo' ? (node.groupInfo as unknown as Record<string, unknown>) : null;
+  }
+}
+
+/** Type-safe accessor for a node's direct (top-level) property. */
+function getNodeDirect(node: FFNode, property: string): unknown {
+  return (node as unknown as Record<string, unknown>)[property];
+}
+
+/** Compute dirty-tracking state after a property change. */
+function applyDirtyTracking(
+  pathKey: string,
+  value: unknown,
+  get: () => EditorState,
+): { dirtyPaths: Set<string>; dirtyNodeIds: Set<string>; dirty: boolean } {
+  const dirtyPaths = new Set(get().dirtyPaths);
+  const original = get().originalValues.get(pathKey);
+  if (original === value) {
+    dirtyPaths.delete(pathKey);
+  } else {
+    dirtyPaths.add(pathKey);
+  }
+  const dirtyNodeIds = new Set<string>();
+  for (const p of dirtyPaths) {
+    dirtyNodeIds.add(p.split('|')[0]);
+  }
+  return { dirtyPaths, dirtyNodeIds, dirty: dirtyPaths.size > 0 };
 }
 
 export interface EditorState {
@@ -165,30 +206,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const info = (node as unknown as Record<string, unknown>)[infoKey];
-    if (info && typeof info === 'object') {
-      (info as Record<string, unknown>)[property] = value;
+    const info = getNodeInfo(node, infoKey);
+    if (info) {
+      info[property] = value;
     }
 
     const pathKey = `${nodeId}|${infoKey}|${property}`;
-    const dirtyPaths = new Set(get().dirtyPaths);
-    const originalValues = get().originalValues;
+    const tracking = applyDirtyTracking(pathKey, value, get);
 
-    // Compare against the original value — clear dirty if reverted
-    const original = originalValues.get(pathKey);
-    if (original === value) {
-      dirtyPaths.delete(pathKey);
-    } else {
-      dirtyPaths.add(pathKey);
-    }
-
-    // Derive the set of node ids that still have at least one dirty property
-    const dirtyNodeIds = new Set<string>();
-    for (const p of dirtyPaths) {
-      dirtyNodeIds.add(p.split('|')[0]);
-    }
-
-    set({ schema: newSchema, dirty: dirtyPaths.size > 0, nodeMap: newMap, dirtyPaths, dirtyNodeIds });
+    set({ schema: newSchema, nodeMap: newMap, ...tracking });
   },
 
   updateNodeDirect: (nodeId, property, value) => {
@@ -213,22 +239,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     const pathKey = `${nodeId}|.|${property}`;
-    const dirtyPaths = new Set(get().dirtyPaths);
-    const originalValues = get().originalValues;
+    const tracking = applyDirtyTracking(pathKey, value, get);
 
-    const original = originalValues.get(pathKey);
-    if (original === value) {
-      dirtyPaths.delete(pathKey);
-    } else {
-      dirtyPaths.add(pathKey);
-    }
-
-    const dirtyNodeIds = new Set<string>();
-    for (const p of dirtyPaths) {
-      dirtyNodeIds.add(p.split('|')[0]);
-    }
-
-    set({ schema: newSchema, dirty: dirtyPaths.size > 0, nodeMap: newMap, dirtyPaths, dirtyNodeIds });
+    set({ schema: newSchema, nodeMap: newMap, ...tracking });
   },
 
   markDirty: () => set({ dirty: true }),
@@ -414,25 +427,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ schema: newSchema, nodeMap: finalMap, dirty: true });
   },
 }));
-
-// ─── Internal Helpers ───────────────────────────────────────────────────────
-
-/** Walk the tree and return the parent node + index of the child with the given id. */
-function findParent(root: FFNode, childId: string): { parent: FFNode; index: number } | null {
-  function walk(node: FFNode): { parent: FFNode; index: number } | null {
-    for (let i = 0; i < node.children.length; i++) {
-      if (node.children[i].id === childId) {
-        return { parent: node, index: i };
-      }
-      const found = walk(node.children[i]);
-      if (found) {
-        return found;
-      }
-    }
-    return null;
-  }
-  return walk(root);
-}
 
 // ─── Selectors ──────────────────────────────────────────────────────────────
 

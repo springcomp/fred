@@ -1,8 +1,10 @@
 # Code Violations & Best Practice Issues
 
-## 1. Duplicated Code
+## 1. Duplicated Code ✅
 
-### 1a. `parseSequenceChildren` / `parseChoiceChildren` (parser.ts, lines 239–310)
+### 1a. `parseSequenceChildren` / `parseChoiceChildren` (parser.ts, lines 239–310) ✅
+
+> **Resolved** — Unified into a single `parseGroupChildren` function accepting a `FFRecordNode | FFSequenceNode | FFChoiceNode` parent.
 
 These two functions are nearly identical ~35-line blocks. Both iterate over XS child elements and handle `element`, `sequence`, and `choice` in exactly the same way. The only semantic difference is the parent type signature.
 
@@ -70,7 +72,9 @@ function parseGroupChildren(
 
 ---
 
-### 1b. `serializeSequence` / `serializeChoice` (serializer.ts, lines 223–256)
+### 1b. `serializeSequence` / `serializeChoice` (serializer.ts, lines 223–256) ✅
+
+> **Resolved** — Unified into `serializeGroup(tagName, node, lines, depth)` parameterised by tag name.
 
 Both functions follow the same pattern — open tag, annotation, children, close tag — differing only in the XML tag name (`xs:sequence` vs `xs:choice`).
 
@@ -123,7 +127,9 @@ function serializeGroup(
 
 ---
 
-### 1c. Duplicated `findParent` Tree Walk
+### 1c. Duplicated `findParent` Tree Walk ✅
+
+> **Resolved** — Exported a single `findParent()` from `model/types.ts`; removed duplicates from `editorStore.ts` and `ContextMenu.tsx`.
 
 **File 1** — `editorStore.ts` (lines 420–434):
 
@@ -163,7 +169,9 @@ Functionally identical — the store version also returns the index.
 
 ---
 
-### 1d. `UNBOUNDED` Constant Defined 4 Times
+### 1d. `UNBOUNDED` Constant Defined 4 Times ✅
+
+> **Resolved** — Exported `UNBOUNDED` from `model/types.ts`; all four local definitions removed.
 
 | Location | Code |
 |----------|------|
@@ -182,7 +190,9 @@ Import everywhere else.
 
 ---
 
-### 1e. Icon Maps and Kind-Label Helpers Duplicated
+### 1e. Icon Maps and Kind-Label Helpers Duplicated ✅
+
+> **Resolved** — Exported `insertKindIcon` and `insertKindLabel` from `NodeIcon.tsx`; removed copies from `Toolbar.tsx` and `ContextMenu.tsx`.
 
 **Toolbar.tsx** (lines 225–235):
 
@@ -225,7 +235,9 @@ export function insertKindLabel(kind: InsertableKind): string { ... }
 
 ---
 
-### 1f. `handleMinOccursChange` Duplicated in Two Panels
+### 1f. `handleMinOccursChange` Duplicated in Two Panels ✅
+
+> **Resolved** — Extracted `createMinOccursHandler(maxOccurs, onDirectChange)` factory used by both panels.
 
 **InfoPanels.tsx** — inside `RecordInfoPanel` (line ~305):
 
@@ -302,7 +314,9 @@ The same clone+rebuild pattern is repeated in 7 actions: `updateNodeProperty`, `
 
 ---
 
-## 3. Dirty-Tracking Logic Duplicated in Store
+## 3. Dirty-Tracking Logic Duplicated in Store ✅
+
+> **Resolved** — Extracted `applyDirtyTracking(pathKey, value, get)` helper shared by `updateNodeProperty` and `updateNodeDirect`.
 
 **File**: `editorStore.ts`, lines 168–195 and 210–235.
 
@@ -353,7 +367,9 @@ function applyDirtyTracking(
 
 ---
 
-## 4. Dead/Redundant Code in Serializer
+## 4. Dead/Redundant Code in Serializer ✅
+
+> **Resolved** — Removed the no-op `if/else`; `structure` is now always serialized unconditionally.
 
 **File**: `serializer.ts`, lines 347–350.
 
@@ -375,7 +391,9 @@ attrs.push(attr('structure', info.structure));
 
 ---
 
-## 5. Module-Level Mutable State (Two Separate ID Counters)
+## 5. Module-Level Mutable State (Two Separate ID Counters) ✅
+
+> **Resolved** — Editor-generated IDs now use an `e` prefix (`e1`, `e2`, …) instead of the fragile 1000-gap, with a `resetEditorIds()` helper for tests.
 
 **File 1**: `parser.ts`, line 39:
 
@@ -423,7 +441,9 @@ The `SchemaTree` component listens for this event via `window.addEventListener`.
 
 ---
 
-## 7. Misplaced `downloadAsFile` Utility
+## 7. Misplaced `downloadAsFile` Utility ✅
+
+> **Resolved** — Moved to `src/utils/download.ts`.
 
 **File**: `serializer.ts`, lines 468–477.
 
@@ -447,7 +467,9 @@ This is a DOM side-effect utility that creates an anchor element and triggers a 
 
 ---
 
-## 8. Global Type Declarations in a Component File
+## 8. Global Type Declarations in a Component File ✅
+
+> **Resolved** — Moved to `src/types/file-system-access.d.ts`.
 
 **File**: `Toolbar.tsx`, lines 23–39.
 
@@ -469,7 +491,9 @@ Global `declare` blocks should not live inside a React component file.
 
 ---
 
-## 9. Unsafe Type Casts in Store
+## 9. Unsafe Type Casts in Store ✅
+
+> **Resolved** — Added typed `getNodeInfo(node, infoKey)` and `getNodeDirect(node, property)` accessors replacing the double-cast.
 
 **File**: `editorStore.ts`, lines 39, 166–167.
 
@@ -496,7 +520,9 @@ function getNodeInfo(node: FFNode, infoKey: string): Record<string, unknown> | n
 
 ---
 
-## 10. Label Component Default Class Bug
+## 10. Label Component Default Class Bug ✅
+
+> **Resolved** — `font-medium` is now always included as a base class; `className` is additive.
 
 **File**: `Label.tsx`, line 5.
 
@@ -518,7 +544,9 @@ className={`text-xs font-medium leading-none peer-disabled:cursor-not-allowed pe
 
 ---
 
-## 11. Unused Props in GroupInfoPanel
+## 11. Unused Props in GroupInfoPanel ✅
+
+> **Resolved** — Removed the unused `info`, `onChange`, and `isDirty` props from `GroupInfoPanel` and its interface.
 
 **File**: `InfoPanels.tsx`, lines 522–525.
 
@@ -537,7 +565,9 @@ Three props (`info`, `onChange`, `isDirty`) are destructured with underscore pre
 
 ---
 
-## 12. No Error Boundaries
+## 12. No Error Boundaries ✅
+
+> **Resolved** — Added `<ErrorBoundary>` component wrapping the app, and try/catch guards in `loadFromText` and the initial `parseXsd` call in `App.tsx`.
 
 `parseXsd()` throws on invalid XML (`throw new Error('Not a valid XSD schema')`), but:
 
@@ -554,7 +584,9 @@ A malformed XSD file will crash the entire application.
 
 ---
 
-## 13. No Tests
+## 13. No Tests ✅
+
+> **Resolved** — Added 153 Vitest tests across `tests/types.test.ts`, `tests/parser.test.ts`, `tests/serializer.test.ts`, and `tests/editorStore.test.ts`, including round-trip parse→serialize→parse coverage.
 
 There are zero test files in the project. The following are highly testable pure-logic modules:
 
@@ -579,7 +611,9 @@ Round-trip tests (`parse → serialize → parse` yielding an identical tree) wo
 
 **Suggested fix**: Extract to `utils/fileOps.ts` or a `useFileOperations()` hook.
 
-### 14b. `serializeElement` / `serializeAttribute` Share Annotation Pattern
+### 14b. `serializeElement` / `serializeAttribute` Share Annotation Pattern ✅
+
+> **Resolved** — Extracted `emitFieldAnnotation(ind, fieldAttrs, lines)` helper used by both functions.
 
 Both produce the same annotation block (annotation → appinfo → `b:fieldInfo`). Could be extracted:
 
@@ -593,7 +627,9 @@ function emitFieldAnnotation(ind: string, fieldAttrs: string, lines: string[]) {
 }
 ```
 
-### 14c. `InfoPanels.tsx` Is 583 Lines
+### 14c. `InfoPanels.tsx` Is 583 Lines ✅
+
+> **Resolved** — Split into `SchemaInfoPanel.tsx`, `RecordInfoPanel.tsx`, `FieldInfoPanel.tsx`, `GroupInfoPanel.tsx`, and `enumMaps.ts`. `InfoPanels.tsx` is now a barrel re-export file.
 
 This is the largest source file. It contains four distinct panel components plus all enum display maps.
 

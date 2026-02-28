@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type NodeRendererProps, Tree } from 'react-arborist';
 import { Badge } from '@/components/ui/Badge';
-import { type FFNode, type FFOccurrenceNode, getNodeLabel } from '@/model/types';
+import { type FFNode, type FFOccurrenceNode, getNodeLabel, UNBOUNDED } from '@/model/types';
 import { useEditorStore } from '@/store/editorStore';
 import { ContextMenu, type MenuPosition } from './ContextMenu';
 import { NodeIcon, nodeKindLabel } from './NodeIcon';
 
 /** Node kinds that have minOccurs / maxOccurs. */
 const OCCURRENCE_KINDS = new Set<FFNode['kind']>(['record', 'element', 'sequence', 'choice']);
-
-const UNBOUNDED = Number.MAX_SAFE_INTEGER;
 
 /** Format an occurrence hint like "0 … *". Returns null for the default 1…1. */
 function occurrenceHint(node: FFNode): string | null {

@@ -1,37 +1,14 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  AtSign,
-  ChevronRight,
-  Diamond,
-  FolderOpen,
-  GitBranch,
-  ListOrdered,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type FFNode, getInsertableKinds, getSiblingInsertableKinds, type InsertableKind } from '@/model/types';
+import { findParent, getInsertableKinds, getSiblingInsertableKinds, type InsertableKind } from '@/model/types';
 import { useEditorStore } from '@/store/editorStore';
-import { nodeKindLabel } from './NodeIcon';
+import { insertKindIcon, insertKindLabel } from './NodeIcon';
 
 /** Position for the context menu. */
 export interface MenuPosition {
   x: number;
   y: number;
   nodeId: string;
-}
-
-const kindIcon: Record<InsertableKind, React.ReactNode> = {
-  record: <FolderOpen size={14} className="text-node-record" />,
-  element: <Diamond size={14} className="text-node-element" />,
-  sequence: <ListOrdered size={14} className="text-node-sequence" />,
-  choice: <GitBranch size={14} className="text-node-choice" />,
-  attribute: <AtSign size={14} className="text-node-attribute" />,
-};
-
-function kindLabel(kind: InsertableKind): string {
-  return kind === 'element' ? 'Field' : nodeKindLabel(kind);
 }
 
 export function ContextMenu({ position, onClose }: { position: MenuPosition; onClose: () => void }) {
@@ -94,9 +71,9 @@ export function ContextMenu({ position, onClose }: { position: MenuPosition; onC
   // but disable Insert After for groups that must be unique under a record.
   let validSiblings: InsertableKind[] = [];
   if (!isRoot && schema) {
-    const parentNode = findParentNode(schema, node.id);
-    if (parentNode) {
-      validSiblings = getSiblingInsertableKinds(parentNode, node);
+    const parentEntry = findParent(schema, node.id);
+    if (parentEntry) {
+      validSiblings = getSiblingInsertableKinds(parentEntry.parent, node);
     }
   }
 
@@ -248,27 +225,10 @@ function SubMenu({
           className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-accent"
           onClick={() => onSelect(kind)}
         >
-          {kindIcon[kind]}
-          <span>{kindLabel(kind)}</span>
+          {insertKindIcon[kind]}
+          <span>{insertKindLabel(kind)}</span>
         </div>
       ))}
     </div>
   );
-}
-
-/** Walk the tree to find the parent node of a given child. */
-function findParentNode(root: FFNode, childId: string): FFNode | null {
-  function walk(node: FFNode): FFNode | null {
-    for (const child of node.children) {
-      if (child.id === childId) {
-        return node;
-      }
-      const found = walk(child);
-      if (found) {
-        return found;
-      }
-    }
-    return null;
-  }
-  return walk(root);
 }

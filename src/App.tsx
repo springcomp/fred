@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PropertySheet } from './components/properties/PropertySheet';
 import { SplitPane } from './components/SplitPane';
 import { Toolbar } from './components/Toolbar';
@@ -12,14 +13,20 @@ export function App() {
 
   useEffect(() => {
     if (!schema) {
-      useEditorStore.getState().loadSchema(parseXsd(untitledXsd));
+      try {
+        useEditorStore.getState().loadSchema(parseXsd(untitledXsd));
+      } catch (e) {
+        console.error('Failed to load default schema:', e);
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex flex-col h-full">
-      <Toolbar />
-      <SplitPane left={<SchemaTree />} right={<PropertySheet />} defaultWidth={360} minWidth={200} maxWidth={600} />
-    </div>
+    <ErrorBoundary>
+      <div className="flex flex-col h-full">
+        <Toolbar />
+        <SplitPane left={<SchemaTree />} right={<PropertySheet />} defaultWidth={360} minWidth={200} maxWidth={600} />
+      </div>
+    </ErrorBoundary>
   );
 }

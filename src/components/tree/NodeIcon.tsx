@@ -1,5 +1,5 @@
 import { AtSign, Diamond, FileCode, FolderOpen, GitBranch, ListOrdered, type LucideProps } from 'lucide-react';
-import type { FFNode } from '@/model/types';
+import type { FFNode, InsertableKind } from '@/model/types';
 
 interface NodeIconProps extends LucideProps {
   node: FFNode;
@@ -44,4 +44,18 @@ export function nodeKindLabel(kind: FFNode['kind']): string {
     case 'attribute':
       return 'Attribute';
   }
+}
+
+/** Shared icon map for insertable node kinds. */
+export const insertKindIcon: Record<InsertableKind, React.ReactNode> = {
+  record: <FolderOpen size={14} className="text-node-record" />,
+  element: <Diamond size={14} className="text-node-element" />,
+  sequence: <ListOrdered size={14} className="text-node-sequence" />,
+  choice: <GitBranch size={14} className="text-node-choice" />,
+  attribute: <AtSign size={14} className="text-node-attribute" />,
+};
+
+/** Display label for an insertable kind (maps 'element' → 'Field'). */
+export function insertKindLabel(kind: InsertableKind): string {
+  return kind === 'element' ? 'Field' : nodeKindLabel(kind);
 }

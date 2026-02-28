@@ -5,10 +5,12 @@ import {
   createDefaultRecordInfo,
   createDefaultSchemaInfo,
   type FFAttributeNode,
+  type FFChoiceNode,
   type FFElementNode,
   type FFRecordNode,
   type FFSchemaNode,
   type FFSequenceNode,
+  resetEditorIds,
   XmlSchemaUse,
 } from '@/model/types';
 import { useEditorStore } from '@/store/editorStore';
@@ -79,6 +81,7 @@ function makeTestSchema(): FFSchemaNode {
 
 // Reset the store before each test
 beforeEach(() => {
+  resetEditorIds();
   useEditorStore.setState({
     schema: null,
     nodeMap: new Map(),
@@ -629,5 +632,125 @@ describe('editorStore – addChildNode edge cases', () => {
     const state = useEditorStore.getState();
     expect(state.schema?.children).toHaveLength(1);
     expect(state.schema?.children[0].kind).toBe('record');
+  });
+});
+
+// ─── Typed accessor coverage ────────────────────────────────────────────────
+
+describe('editorStore – typed accessor (getNodeInfo)', () => {
+  it('updates schemaInfo property via updateNodeProperty', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+    useEditorStore.getState().updateNodeProperty('s1', 'schemaInfo', 'codePage', 1252);
+    const state = useEditorStore.getState();
+    expect(state.schema?.schemaInfo.codePage).toBe(1252);
+    expect(state.dirty).toBe(true);
+  });
+
+  it('updates recordInfo property via updateNodeProperty', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+    useEditorStore.getState().updateNodeProperty('r1', 'recordInfo', 'tagOffset', 5);
+    const state = useEditorStore.getState();
+    const rec = state.nodeMap.get('r1') as FFRecordNode;
+    expect(rec.recordInfo.tagOffset).toBe(5);
+  });
+
+  it('updates groupInfo property via updateNodeProperty', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+    useEditorStore.getState().updateNodeProperty('seq1', 'groupInfo', 'sequenceNumber', 42);
+    const state = useEditorStore.getState();
+    const seq = state.nodeMap.get('seq1') as FFSequenceNode;
+    expect(seq.groupInfo.sequenceNumber).toBe(42);
+  });
+
+  it('ignores update with mismatched infoKey', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+    // Record doesn't have 'fieldInfo'
+    useEditorStore.getState().updateNodeProperty('r1', 'fieldInfo', 'positionalLength', 10);
+    const state = useEditorStore.getState();
+    // Should not crash; the record should be unchanged
+    const rec = state.nodeMap.get('r1') as FFRecordNode;
+    expect(rec.recordInfo.tagOffset).toBe(0);
+  });
+});
+
+// ─── Dirty tracking helper coverage ─────────────────────────────────────────
+
+describe('editorStore – dirty tracking helper (applyDirtyTracking)', () => {
+  it('marks dirty and reverts correctly via updateNodeProperty', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+
+    // Change a field
+    useEditorStore.getState().updateNodeProperty('e1', 'fieldInfo', 'positionalLength', 99);
+    expect(useEditorStore.getState().dirty).toBe(true);
+    expect(useEditorStore.getState().dirtyNodeIds.has('e1')).toBe(true);
+
+    // Revert back
+    useEditorStore.getState().updateNodeProperty('e1', 'fieldInfo', 'positionalLength', 0);
+    expect(useEditorStore.getState().dirty).toBe(false);
+    expect(useEditorStore.getState().dirtyNodeIds.has('e1')).toBe(false);
+  });
+
+  it('marks dirty and reverts correctly via updateNodeDirect', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+
+    useEditorStore.getState().updateNodeDirect('r1', 'minOccurs', 0);
+    expect(useEditorStore.getState().dirty).toBe(true);
+    expect(useEditorStore.getState().dirtyNodeIds.has('r1')).toBe(true);
+
+    useEditorStore.getState().updateNodeDirect('r1', 'minOccurs', 1);
+    expect(useEditorStore.getState().dirty).toBe(false);
+  });
+});
+
+// ─── Editor-created node IDs ────────────────────────────────────────────────
+
+describe('editorStore – editor node IDs', () => {
+  it('generates editor node IDs with "e" prefix', () => {
+    useEditorStore.getState().loadSchema(makeTestSchema());
+    useEditorStore.getState().addChildNode('seq1', 'element');
+    const state = useEditorStore.getState();
+    // Find the newly added node - it should have an 'e' prefix
+    const seq = state.nodeMap.get('seq1') as FFSequenceNode;
+    const newChild = seq.children[seq.children.length - 1];
+    expect(newChild.id.startsWith('e')).toBe(true);
+  });
+});
+
+// ─── Group kind toggling via choice nodes ───────────────────────────────────
+
+describe('editorStore – choice/sequence group operations', () => {
+  it('adds and manages children through choice nodes', () => {
+    const choice: FFChoiceNode = {
+      id: 'ch1',
+      kind: 'choice',
+      minOccurs: 1,
+      maxOccurs: 1,
+      groupInfo: createDefaultGroupInfo(),
+      children: [],
+    };
+    const rec: FFRecordNode = {
+      id: 'r1',
+      kind: 'record',
+      name: 'Root',
+      namespace: '',
+      minOccurs: 1,
+      maxOccurs: 1,
+      recordInfo: createDefaultRecordInfo(),
+      children: [choice],
+    };
+    const schema: FFSchemaNode = {
+      id: 's1',
+      kind: 'schema',
+      targetNamespace: '',
+      elementFormDefault: 'qualified',
+      schemaInfo: createDefaultSchemaInfo(),
+      children: [rec],
+    };
+    useEditorStore.getState().loadSchema(schema);
+    useEditorStore.getState().addChildNode('ch1', 'element');
+    const state = useEditorStore.getState();
+    const ch = state.nodeMap.get('ch1') as FFChoiceNode;
+    expect(ch.children).toHaveLength(1);
+    expect(ch.children[0].kind).toBe('element');
   });
 });

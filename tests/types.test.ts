@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   buildNodeMap,
   Case,
@@ -16,15 +16,23 @@ import {
   type FFRecordNode,
   type FFSchemaNode,
   type FFSequenceNode,
+  findParent,
+  generateNodeId,
   generateNodeName,
   getInsertableKinds,
   getNodeLabel,
   getSiblingInsertableKinds,
   Justification,
   ParserOptimization,
+  resetEditorIds,
   StructureType,
+  UNBOUNDED,
   XmlSchemaUse,
 } from '@/model/types';
+
+beforeEach(() => {
+  resetEditorIds();
+});
 
 // ─── Default Factories ──────────────────────────────────────────────────────
 
@@ -483,5 +491,125 @@ describe('createNewNode', () => {
     const node = createNewNode('choice', emptyMap);
     expect(node.kind).toBe('choice');
     expect(node.children).toHaveLength(0);
+  });
+});
+
+// ─── UNBOUNDED constant ─────────────────────────────────────────────────────
+
+describe('UNBOUNDED', () => {
+  it('equals Number.MAX_SAFE_INTEGER', () => {
+    expect(UNBOUNDED).toBe(Number.MAX_SAFE_INTEGER);
+  });
+});
+
+// ─── generateNodeId (editor prefix) ─────────────────────────────────────────
+
+describe('generateNodeId', () => {
+  it('generates ids with "e" prefix', () => {
+    const id1 = generateNodeId();
+    const id2 = generateNodeId();
+    expect(id1).toBe('e1');
+    expect(id2).toBe('e2');
+  });
+
+  it('does not collide with parser "n" prefix ids', () => {
+    const id = generateNodeId();
+    expect(id.startsWith('e')).toBe(true);
+    expect(id.startsWith('n')).toBe(false);
+  });
+
+  it('resets properly between tests', () => {
+    resetEditorIds();
+    expect(generateNodeId()).toBe('e1');
+  });
+});
+
+// ─── findParent ─────────────────────────────────────────────────────────────
+
+describe('findParent', () => {
+  const child: FFElementNode = {
+    id: 'c1',
+    kind: 'element',
+    name: 'F',
+    namespace: '',
+    dataType: 'xs:string',
+    minOccurs: 1,
+    maxOccurs: 1,
+    fieldInfo: createDefaultFieldInfo(),
+    children: [],
+  };
+  const seq: FFSequenceNode = {
+    id: 'seq',
+    kind: 'sequence',
+    minOccurs: 1,
+    maxOccurs: 1,
+    groupInfo: createDefaultGroupInfo(),
+    children: [child],
+  };
+  const rec: FFRecordNode = {
+    id: 'r1',
+    kind: 'record',
+    name: 'Rec',
+    namespace: '',
+    minOccurs: 1,
+    maxOccurs: 1,
+    recordInfo: createDefaultRecordInfo(),
+    children: [seq],
+  };
+  const schema: FFSchemaNode = {
+    id: 's1',
+    kind: 'schema',
+    targetNamespace: '',
+    elementFormDefault: 'qualified',
+    schemaInfo: createDefaultSchemaInfo(),
+    children: [rec],
+  };
+
+  it('finds the parent and index of a direct child', () => {
+    const result = findParent(schema, 'r1');
+    expect(result).not.toBeNull();
+    expect(result?.parent.id).toBe('s1');
+    expect(result?.index).toBe(0);
+  });
+
+  it('finds the parent of a deeply nested child', () => {
+    const result = findParent(schema, 'c1');
+    expect(result).not.toBeNull();
+    expect(result?.parent.id).toBe('seq');
+    expect(result?.index).toBe(0);
+  });
+
+  it('returns null for the root node', () => {
+    const result = findParent(schema, 's1');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for a non-existent id', () => {
+    const result = findParent(schema, 'nonexistent');
+    expect(result).toBeNull();
+  });
+
+  it('returns the correct index for non-first children', () => {
+    const child2: FFElementNode = {
+      id: 'c2',
+      kind: 'element',
+      name: 'G',
+      namespace: '',
+      dataType: 'xs:string',
+      minOccurs: 1,
+      maxOccurs: 1,
+      fieldInfo: createDefaultFieldInfo(),
+      children: [],
+    };
+    const seqWithTwo: FFSequenceNode = {
+      ...seq,
+      children: [child, child2],
+    };
+    const recWithTwo: FFRecordNode = { ...rec, children: [seqWithTwo] };
+    const schemaWithTwo: FFSchemaNode = { ...schema, children: [recWithTwo] };
+
+    const result = findParent(schemaWithTwo, 'c2');
+    expect(result).not.toBeNull();
+    expect(result?.index).toBe(1);
   });
 });

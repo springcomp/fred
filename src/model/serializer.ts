@@ -122,10 +122,10 @@ function serializeNode(node: FFNode, lines: string[], depth: number) {
       serializeAttribute(node, lines, depth);
       break;
     case 'sequence':
-      serializeSequence(node, lines, depth);
+      serializeGroup('sequence', node, lines, depth);
       break;
     case 'choice':
-      serializeChoice(node, lines, depth);
+      serializeGroup('choice', node, lines, depth);
       break;
     case 'schema':
       // nested schema shouldn't happen, but handle gracefully
@@ -178,6 +178,14 @@ function serializeRecord(node: FFRecordNode, lines: string[], depth: number) {
   lines.push(`${ind}</xs:element>`);
 }
 
+function emitFieldAnnotation(ind: string, fieldAttrs: string, lines: string[]) {
+  lines.push(`${ind}  <xs:annotation>`);
+  lines.push(`${ind}    <xs:appinfo>`);
+  lines.push(`${ind}      <b:fieldInfo ${fieldAttrs} />`);
+  lines.push(`${ind}    </xs:appinfo>`);
+  lines.push(`${ind}  </xs:annotation>`);
+}
+
 function serializeElement(node: FFElementNode, lines: string[], depth: number) {
   const ind = '  '.repeat(depth);
   const occAttrs = occurrenceAttrs(node.minOccurs, node.maxOccurs);
@@ -186,11 +194,7 @@ function serializeElement(node: FFElementNode, lines: string[], depth: number) {
 
   if (fieldAttrs) {
     lines.push(`${ind}<xs:element name="${escapeAttr(node.name)}"${typeAttr}${occAttrs}>`);
-    lines.push(`${ind}  <xs:annotation>`);
-    lines.push(`${ind}    <xs:appinfo>`);
-    lines.push(`${ind}      <b:fieldInfo ${fieldAttrs} />`);
-    lines.push(`${ind}    </xs:appinfo>`);
-    lines.push(`${ind}  </xs:annotation>`);
+    emitFieldAnnotation(ind, fieldAttrs, lines);
     lines.push(`${ind}</xs:element>`);
   } else {
     lines.push(`${ind}<xs:element name="${escapeAttr(node.name)}"${typeAttr}${occAttrs} />`);
@@ -205,23 +209,24 @@ function serializeAttribute(node: FFAttributeNode, lines: string[], depth: numbe
 
   if (fieldAttrs) {
     lines.push(`${ind}<xs:attribute name="${escapeAttr(node.name)}"${typeAttr}${useAttr}>`);
-    lines.push(`${ind}  <xs:annotation>`);
-    lines.push(`${ind}    <xs:appinfo>`);
-    lines.push(`${ind}      <b:fieldInfo ${fieldAttrs} />`);
-    lines.push(`${ind}    </xs:appinfo>`);
-    lines.push(`${ind}  </xs:annotation>`);
+    emitFieldAnnotation(ind, fieldAttrs, lines);
     lines.push(`${ind}</xs:attribute>`);
   } else {
     lines.push(`${ind}<xs:attribute name="${escapeAttr(node.name)}"${typeAttr}${useAttr} />`);
   }
 }
 
-function serializeSequence(node: FFSequenceNode, lines: string[], depth: number) {
+function serializeGroup(
+  tagName: 'sequence' | 'choice',
+  node: FFSequenceNode | FFChoiceNode,
+  lines: string[],
+  depth: number,
+) {
   const ind = '  '.repeat(depth);
   const occAttrs = occurrenceAttrs(node.minOccurs, node.maxOccurs);
   const groupAttrs = serializeGroupInfoAttrs(node.groupInfo);
 
-  lines.push(`${ind}<xs:sequence${occAttrs}>`);
+  lines.push(`${ind}<xs:${tagName}${occAttrs}>`);
 
   if (groupAttrs) {
     lines.push(`${ind}  <xs:annotation>`);
@@ -234,28 +239,7 @@ function serializeSequence(node: FFSequenceNode, lines: string[], depth: number)
   for (const child of node.children) {
     serializeNode(child, lines, depth + 1);
   }
-  lines.push(`${ind}</xs:sequence>`);
-}
-
-function serializeChoice(node: FFChoiceNode, lines: string[], depth: number) {
-  const ind = '  '.repeat(depth);
-  const occAttrs = occurrenceAttrs(node.minOccurs, node.maxOccurs);
-  const groupAttrs = serializeGroupInfoAttrs(node.groupInfo);
-
-  lines.push(`${ind}<xs:choice${occAttrs}>`);
-
-  if (groupAttrs) {
-    lines.push(`${ind}  <xs:annotation>`);
-    lines.push(`${ind}    <xs:appinfo>`);
-    lines.push(`${ind}      <b:groupInfo ${groupAttrs} />`);
-    lines.push(`${ind}    </xs:appinfo>`);
-    lines.push(`${ind}  </xs:annotation>`);
-  }
-
-  for (const child of node.children) {
-    serializeNode(child, lines, depth + 1);
-  }
-  lines.push(`${ind}</xs:choice>`);
+  lines.push(`${ind}</xs:${tagName}>`);
 }
 
 // ─── Annotation Attribute Serialization ─────────────────────────────────────
@@ -342,11 +326,7 @@ function serializeRecordInfoAttrs(info: RecordInfo): string {
   const defaults = createDefaultRecordInfo();
   const attrs: string[] = [];
 
-  if (info.structure !== defaults.structure) {
-    attrs.push(attr('structure', info.structure));
-  } else {
-    attrs.push(attr('structure', info.structure));
-  }
+  attrs.push(attr('structure', info.structure));
   if (info.childDelimiter) {
     attrs.push(attr('child_delimiter', info.childDelimiter));
   }
@@ -460,17 +440,4 @@ function occurrenceAttrs(minOccurs: number, maxOccurs: number): string {
     s += ` maxOccurs="${maxOccurs}"`;
   }
   return s;
-}
-
-/** Trigger a browser download of text content. */
-export function downloadAsFile(content: string, filename: string) {
-  const blob = new Blob([content], { type: 'application/xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }

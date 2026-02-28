@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { parseXsd, resetIds } from '@/model/parser';
+import { serializeXsd } from '@/model/serializer';
 import {
   Case,
   CharacterType,
@@ -682,5 +683,108 @@ describe('parseXsd – edge cases', () => {
     const seq = choice.children[0] as FFSequenceNode;
     expect(seq.kind).toBe('sequence');
     expect(seq.children).toHaveLength(1);
+  });
+});
+
+// ─── Round-trip (parse → serialize → parse) ─────────────────────────────────
+
+describe('parseXsd – round-trip', () => {
+  it('round-trips a schema with nested sequences and choices', () => {
+    const xsd = wrapXsd(`
+      <xs:element name="Root">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="A" type="xs:string" />
+            <xs:choice>
+              <xs:element name="B" type="xs:int" />
+              <xs:sequence>
+                <xs:element name="C" type="xs:string" />
+              </xs:sequence>
+            </xs:choice>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    `);
+
+    const tree1 = parseXsd(xsd);
+    const xml = serializeXsd(tree1);
+    resetIds();
+    const tree2 = parseXsd(xml);
+
+    // Both trees should have the same structure
+    expect(tree2.children).toHaveLength(1);
+    const rec2 = tree2.children[0] as FFRecordNode;
+    expect(rec2.name).toBe('Root');
+
+    const seq2 = rec2.children.find(c => c.kind === 'sequence') as FFSequenceNode;
+    expect(seq2.children).toHaveLength(2);
+    expect((seq2.children[0] as FFElementNode).name).toBe('A');
+
+    const choice2 = seq2.children[1] as FFChoiceNode;
+    expect(choice2.children).toHaveLength(2);
+    expect((choice2.children[0] as FFElementNode).name).toBe('B');
+
+    const innerSeq = choice2.children[1] as FFSequenceNode;
+    expect(innerSeq.kind).toBe('sequence');
+    expect((innerSeq.children[0] as FFElementNode).name).toBe('C');
+  });
+
+  it('round-trips a schema with attributes and records', () => {
+    const xsd = wrapXsd(`
+      <xs:annotation><xs:appinfo>
+        <b:schemaInfo standard="Flat File" root_reference="Root" />
+      </xs:appinfo></xs:annotation>
+      <xs:element name="Root">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Field1" type="xs:string" />
+          </xs:sequence>
+          <xs:attribute name="Attr1" type="xs:string" use="required" />
+        </xs:complexType>
+      </xs:element>
+    `);
+
+    const tree1 = parseXsd(xsd);
+    const xml = serializeXsd(tree1);
+    resetIds();
+    const tree2 = parseXsd(xml);
+
+    const rec = tree2.children[0] as FFRecordNode;
+    expect(rec.name).toBe('Root');
+
+    const attrs = rec.children.filter(c => c.kind === 'attribute');
+    expect(attrs).toHaveLength(1);
+    expect((attrs[0] as FFAttributeNode).name).toBe('Attr1');
+    expect((attrs[0] as FFAttributeNode).use).toBe(XmlSchemaUse.Required);
+
+    const seqs = rec.children.filter(c => c.kind === 'sequence');
+    expect(seqs).toHaveLength(1);
+    expect((seqs[0] as FFSequenceNode).children).toHaveLength(1);
+  });
+
+  it('round-trips choice inside choice (nested group)', () => {
+    const xsd = wrapXsd(`
+      <xs:element name="Rec">
+        <xs:complexType>
+          <xs:choice>
+            <xs:choice>
+              <xs:element name="Deep" type="xs:string" />
+            </xs:choice>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+    `);
+
+    const tree1 = parseXsd(xsd);
+    const xml = serializeXsd(tree1);
+    resetIds();
+    const tree2 = parseXsd(xml);
+
+    const rec2 = tree2.children[0] as FFRecordNode;
+    const outerChoice = rec2.children.find(c => c.kind === 'choice') as FFChoiceNode;
+    expect(outerChoice.children).toHaveLength(1);
+    const innerChoice = outerChoice.children[0] as FFChoiceNode;
+    expect(innerChoice.kind).toBe('choice');
+    expect((innerChoice.children[0] as FFElementNode).name).toBe('Deep');
   });
 });

@@ -592,4 +592,20 @@ describe('serializeXsd – round-trip structure', () => {
     expect(xml).toContain('name="id"');
     expect(xml).toContain('type="xs:int"');
   });
+
+  it('always serializes structure attribute for recordInfo (dead code fix)', () => {
+    // Both default and non-default structure should be serialized
+    const ri1 = createDefaultRecordInfo();
+    // default is 'delimited'
+    const rec1 = makeRecord('R1', [makeSequence()], { recordInfo: ri1 });
+    const schema1 = makeSchema([rec1]);
+    const xml1 = serializeXsd(schema1);
+    expect(xml1).toContain('structure="delimited"');
+
+    const ri2 = { ...createDefaultRecordInfo(), structure: StructureType.Positional };
+    const rec2 = makeRecord('R2', [makeSequence()], { recordInfo: ri2 });
+    const schema2 = makeSchema([rec2]);
+    const xml2 = serializeXsd(schema2);
+    expect(xml2).toContain('structure="positional"');
+  });
 });

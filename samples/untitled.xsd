@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema xmlns="http://example.com/flatfile"
+  xmlns:b="http://schemas.microsoft.com/BizTalk/2003"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.com/flatfile" elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo>
+      <b:schemaInfo standard="Flat File" root_reference="Root" default_child_delimiter="," child_delimiter_type="char" default_child_order="infix" codepage="65001" parser_optimization="speed" lookahead_depth="3" generate_empty_nodes="true" suppress_empty_nodes="false" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="Root">
+    <xs:annotation>
+      <xs:appinfo>
+        <b:recordInfo structure="delimited" child_delimiter="0x0D 0x0A" child_delimiter_type="hex" child_order="postfix" />
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+
+        <xs:element name="Child" type="xs:string">
+          <xs:annotation>
+            <xs:appinfo>
+              <b:fieldInfo sequence_number="1" justification="left" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
